@@ -72,7 +72,7 @@ def encode_identifier(id_type, version, network, genesis_bytes):
     if id_type == KEY:
         try:
             S256Point.parse_sec(genesis_bytes)
-        except:
+        except Exception:
             raise InvalidDidError("Genesis bytes is not a valid compressed secp256k1 public key")
 
     hrp = id_type_to_hrp[id_type]
@@ -189,7 +189,7 @@ def decode_identifier(identifier):
     if id_type == KEY:
         try:
             S256Point.parse_sec(genesis_bytes)
-        except:
+        except Exception:
             raise InvalidDidError()
     
     logger.debug("Decoded: type=%s, version=%s, network=%s", id_type, version, network)
