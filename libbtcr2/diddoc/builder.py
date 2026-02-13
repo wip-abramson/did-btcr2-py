@@ -12,6 +12,9 @@ from typing import Iterator, List, Optional, Type, Union
 from .doc import IntermediateBtcr2DIDDocument, Btcr2Document
 from ..did import encode_identifier
 from ..multikey import get_public_key_multibase
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Btcr2ServiceBuilder(ServiceBuilder):
 
@@ -85,12 +88,15 @@ class Btcr2DIDDocumentBuilder(DIDDocumentBuilder):
 
         p2pkh_address = initial_key.p2pkh_script().address(network)
         builder.service.add_singleton_beacon(p2pkh_address, "initialP2PKH")
+        logger.debug("Added P2PKH beacon at %s", p2pkh_address)
 
         p2wpkh_address = initial_key.p2wpkh_address(network=network)
         builder.service.add_singleton_beacon(p2wpkh_address, "initialP2WPKH")
+        logger.debug("Added P2WPKH beacon at %s", p2wpkh_address)
 
         p2tr_address = initial_key.p2tr_address(network=network)
         builder.service.add_singleton_beacon(p2tr_address, "initialP2TR")
+        logger.debug("Added P2TR beacon at %s", p2tr_address)
 
         return builder
     

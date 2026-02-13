@@ -11,9 +11,12 @@ from buidl.tx import Tx, TxIn, TxOut, SIGHASH_DEFAULT
 from buidl.script import ScriptPubKey, address_to_script_pubkey
 from buidl.ecc import PrivateKey
 import json
+import logging
 from .beacon_manager import BeaconManager
 from .esplora_client import EsploraClient
 from .resolver import Btcr2Resolver
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -61,6 +64,7 @@ class DIDManager():
         self.version = 1
         self.signals_metadata = {}
 
+        logger.info("Created deterministic DID: %s", did_document.id)
         return did_document.id, did_document
 
     def create_external(self, intermediate_document: IntermediateBtcr2DIDDocument, network = "bitcoin", version = 1):
@@ -77,8 +81,10 @@ class DIDManager():
             raise Exception(f"Intermediate Document must use placeholder id : {intermediate_document.id}")
         
         genesis_bytes = sha256(jcs.canonicalize(intermediate_document.serialize()))
+        logger.debug("Genesis bytes: %s", genesis_bytes.hex())
 
         identifier = encode_identifier(EXTERNAL, version, network, genesis_bytes)
+        logger.info("Created external DID: %s", identifier)
 
         did_document = intermediate_document.to_did_document(identifier)
         
@@ -93,11 +99,12 @@ class DIDManager():
 
     def updater(self):
         builder = Btcr2DIDDocumentBuilder.from_doc(self.document.model_copy(deep=True))
-        print(json.dumps(self.document.serialize(), indent=2))
+        logger.debug("Current document: %s", json.dumps(self.document.serialize(), indent=2))
         updater = Btcr2DIDDocumentUpdater(builder, self.version)
         return updater
     
     async def announce_update(self, beacon_id, secured_update):
+        logger.info("Announcing update via beacon %s", beacon_id)
         beacon_manager = self.beacon_managers.get(beacon_id)
         # print(beacon_id)
         # for service in self.document.service:
@@ -120,6 +127,7 @@ class DIDManager():
         signed_tx = beacon_manager.sign_beacon_signal(pending_beacon_signal)
 
         signal_id = self.esplora_client.broadcast_tx(signed_tx.serialize().hex())
+        logger.info("Beacon signal broadcast with txid: %s", signal_id)
 
         self.signals_metadata[signal_id] = {
             "updatePayload": secured_update
@@ -132,6 +140,7 @@ class DIDManager():
         secured_update = updater.finalize_update_payload(vm_id, signing_key)
         self.document = updater.builder.build()
         self.version += 1
+        logger.info("DID updated to version %d", self.version)
         result = await self.announce_update(beacon_id, secured_update)
         
         if not result:
@@ -144,6 +153,7 @@ class DIDManager():
         
         bm = BeaconManager(self.btc_network, beacon_id, initial_sk, script_pubkey, self.esplora_client)
         self.beacon_managers[beacon_id] = bm
+        logger.debug("Added beacon manager for %s at %s", beacon_id, bm.address)
         return bm
 
 
@@ -175,7 +185,7 @@ class DIDManager():
 
     @classmethod
     def from_did(cls, did_data, did_network, btc_network, keystore, esplora_base="http://localhost:3000"):
-
+        logger.info("Loading DID manager from data: %s", did_data["did"])
         did = did_data["did"]
         sidecar_data = did_data["sidecarData"]
         signals_metadata = sidecar_data.get("signalsMetadata", {})

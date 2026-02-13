@@ -6,6 +6,9 @@ from buidl.helper import sha256
 import jcs
 from typing import Any, List, Optional, Union, Annotated
 from pydantic import Field
+import logging
+
+logger = logging.getLogger(__name__)
 
 Btcr2PossibleServiceTypes = Union[PossibleServiceTypes, ServiceBeaconTypes]
 
@@ -54,6 +57,7 @@ class IntermediateBtcr2DIDDocument(Btcr2Document):
     id: DID = PLACEHOLDER_DID
 
     def to_did_document(self, did: DID) -> Btcr2Document:
+        logger.debug("Converting intermediate document to DID document with id: %s", did)
         did_document = Btcr2Document.deserialize(self.model_copy(deep=True).serialize())
 
         did_document.id = did
@@ -136,6 +140,7 @@ class IntermediateBtcr2DIDDocument(Btcr2Document):
        
     @staticmethod
     def from_did_document(did_document):
+        logger.debug("Converting DID document %s to intermediate form", did_document.id)
         intermediate_doc: IntermediateBtcr2DIDDocument = did_document.model_copy(deep=True)
 
         did = did_document.id

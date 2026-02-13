@@ -1,10 +1,13 @@
 from buidl.ecc import S256Point
 import math
+import logging
 
 from .bech32 import encode_bech32_identifier, decode_bech32_identifier
 from.verificationMethod import get_verification_method
 from pydid.did import DID
 from .error import InvalidDidError
+
+logger = logging.getLogger(__name__)
 
 BITCOIN="bitcoin"
 SIGNET="signet"
@@ -53,6 +56,7 @@ PLACEHOLDER_DID = "did:btcr2:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 
 def encode_identifier(id_type, version, network, genesis_bytes):
+    logger.debug("Encoding identifier: type=%s, version=%s, network=%s", id_type, version, network)
     if id_type not in [EXTERNAL, KEY]:
         raise InvalidDidError()
     
@@ -94,7 +98,7 @@ def encode_identifier(id_type, version, network, genesis_bytes):
         data_bytes.append((nibbles[2 * 0] << 4) | nibbles[2 * 0 + 1])
     else:
         for index in range(nibble_range):
-            print(index)
+            logger.debug("index: %s", index)
             raise NotImplementedError()
 
 
@@ -106,11 +110,13 @@ def encode_identifier(id_type, version, network, genesis_bytes):
 
     identifier += encoded_string
 
+    logger.debug("Encoded identifier: %s", identifier)
     return DID(identifier)
 
 
 
 def decode_identifier(identifier):
+    logger.debug("Decoding identifier: %s", identifier)
     components = identifier.split(":")
     if len(components) != 3:
         raise InvalidDidError()
@@ -186,8 +192,9 @@ def decode_identifier(identifier):
         except:
             raise InvalidDidError()
     
+    logger.debug("Decoded: type=%s, version=%s, network=%s", id_type, version, network)
     return id_type, version, network, genesis_bytes
-        
+
 
 
 

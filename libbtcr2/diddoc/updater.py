@@ -11,6 +11,9 @@ from di_bip340.cryptosuite import Bip340JcsCryptoSuite
 from di_bip340.data_integrity_proof import DataIntegrityProof
 from di_bip340.multikey import SchnorrSecp256k1Multikey
 import urllib
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Btcr2DIDDocumentUpdater():
 
@@ -34,9 +37,9 @@ class Btcr2DIDDocumentUpdater():
         service_path = f"/service/{len(self.builder.service.services)}"
 
         service_json = service.serialize()
-        print(json.dumps(self.current_document.serialize(), indent=2))
+        logger.debug("Document before add_service: %s", json.dumps(self.current_document.serialize(), indent=2))
         self.builder.service.services.append(service)
-        print(json.dumps(self.current_document.serialize(), indent=2))
+        logger.debug("Document after add_service: %s", json.dumps(self.current_document.serialize(), indent=2))
 
         patch = self.get_patch('add', service_path, service_json)
 
@@ -48,15 +51,15 @@ class Btcr2DIDDocumentUpdater():
 
 
     def validate_update(self):
-        print("JSON Patch " + json.dumps(self.update_patch))
+        logger.debug("JSON Patch: %s", json.dumps(self.update_patch))
         json_patch = jsonpatch.JsonPatch(self.update_patch)
         # print("Before Patch \n")
         next_document = self.current_document.model_copy(deep=True).serialize()
 
-        print(json.dumps(next_document, indent=2))
+        logger.debug("Before patch: %s", json.dumps(next_document, indent=2))
         next_document = json_patch.apply(next_document)
         # print("After patch\n")
-        print(json.dumps(next_document, indent=2))
+        logger.debug("After patch: %s", json.dumps(next_document, indent=2))
 
         # print(json.dumps(next_document, indent=2))
         next_hash = sha256(jcs.canonicalize(next_document))
@@ -85,7 +88,7 @@ class Btcr2DIDDocumentUpdater():
             'targetVersionId': target_version_id
         }
 
-        print(update_payload)
+        logger.debug("Update payload: %s", update_payload)
         self.update_payload = update_payload
 
         return update_payload
@@ -108,7 +111,7 @@ class Btcr2DIDDocumentUpdater():
                 "capabilityAction": "Write"
         }
 
-        print(json.dumps(self.update_payload, indent=2))
+        logger.debug("Update payload for signing: %s", json.dumps(self.update_payload, indent=2))
 
         secured_did_update_payload = di_proof.add_proof(did_update_invocation, options)
         mediaType = "application/json"

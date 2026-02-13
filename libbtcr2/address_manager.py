@@ -1,6 +1,9 @@
 from buidl.tx import TxIn, Tx, TxOut
 from buidl.script import address_to_script_pubkey
 from buidl.helper import str_to_bytes
+import logging
+
+logger = logging.getLogger(__name__)
 
 class AddressManager():
 
@@ -18,31 +21,31 @@ class AddressManager():
         try:
             utxos = self.esplora_client.get_address_utxos(self.address)
             
-            print("utxos", utxos)
+            logger.debug("utxos: %s", utxos)
             # utxos = [utxo for utxo in utxos if utxo["status"]["confirmed"]]
             for utxo in utxos:
                 txid = bytes.fromhex(utxo["txid"])
                 prev_index = utxo["vout"]
-                print("txid", txid)
-                print("prev_index", prev_index)
-                print("value", utxo["value"])
-                print("utxo", utxo)
+                logger.debug("txid: %s", txid)
+                logger.debug("prev_index: %s", prev_index)
+                logger.debug("value: %s", utxo["value"])
+                logger.debug("utxo: %s", utxo)
                 txin = TxIn(prev_tx=txid, prev_index=prev_index)
                 txin._script_pubkey = self.script_pubkey
                 txin._value = utxo["value"]
                 tx_ins.append(txin)
-            print(f"Found {len(utxos)} UTXOs for {self.address}")
+            logger.info("Found %d UTXOs for %s", len(utxos), self.address)
         except Exception as e:
-            print(f"Error fetching UTXOs: {e}")
+            logger.error("Error fetching UTXOs: %s", e)
         return tx_ins
     
     def add_funding_tx(self, funding_tx):
-        print("Adding funding TX")
+        logger.info("Adding funding TX")
         for index, tx_out in enumerate(funding_tx.tx_outs):
             addr = tx_out.script_pubkey.address(network=self.network)
-            print(self.address, addr)
+            logger.debug("Comparing addresses: %s %s", self.address, addr)
             if self.address == addr:
-                print("Found funding TXOUT")
+                logger.info("Found funding TXOUT")
                 tx_in = TxIn(prev_tx=funding_tx.hash(), prev_index=index)
                 tx_in._script_pubkey = tx_out.script_pubkey
                 tx_in._value = tx_out.amount
@@ -67,16 +70,16 @@ class AddressManager():
         tx_ins = []
         total_value = 0
         for tx_in in self.utxo_tx_ins:
-            print(f"UTXO value: {tx_in.value()} satoshis")
+            logger.debug("UTXO value: %d satoshis", tx_in.value())
             total_value += tx_in.value()
             tx_ins.append(tx_in)
             
             if total_value >= amount + tx_fee:
                 break
 
-        print(f"Selected UTXOs with total value: {total_value} satoshis")
-        print(f"Required amount: {amount} satoshis")
-        print(f"Transaction fee: {tx_fee} satoshis")
+        logger.info("Selected UTXOs with total value: %d satoshis", total_value)
+        logger.info("Required amount: %d satoshis", amount)
+        logger.info("Transaction fee: %d satoshis", tx_fee)
 
         if total_value < amount + tx_fee:
             raise Exception(
@@ -92,18 +95,18 @@ class AddressManager():
             )
 
         # Create transaction outputs
-        print(f"Creating output for {amount} satoshis to {address}")
+        logger.info("Creating output for %d satoshis to %s", amount, address)
         txout = TxOut(amount=amount, script_pubkey=script_pubkey)
-        print(f"Creating refund output for {refund_amount} satoshis to {self.address}")
+        logger.info("Creating refund output for %d satoshis to %s", refund_amount, self.address)
         refund_out = TxOut(
             amount=refund_amount,
             script_pubkey=self.script_pubkey
         )
 
-        print("Transaction details:")
-        print(f"Inputs: {len(tx_ins)} UTXOs totaling {total_value} satoshis")
-        print(f"Outputs: {amount} satoshis to {address} + {refund_amount} satoshis refund")
-        print(f"Fee: {tx_fee} satoshis")
+        logger.info("Transaction details:")
+        logger.info("Inputs: %d UTXOs totaling %d satoshis", len(tx_ins), total_value)
+        logger.info("Outputs: %d satoshis to %s + %d satoshis refund", amount, address, refund_amount)
+        logger.info("Fee: %d satoshis", tx_fee)
 
         # Create and sign transaction
         tx = Tx(
@@ -121,7 +124,7 @@ class AddressManager():
         tx_hex = tx.serialize().hex()
         try:
             tx_id = self.esplora_client.broadcast_tx(tx_hex)
-            print(f"Sent {amount} to {address} with txid {tx_id}")
+            logger.info("Sent %d to %s with txid %s", amount, address, tx_id)
             # Refresh UTXOs after successful broadcast
             new_utxo_txin = TxIn(prev_tx=tx.hash(), prev_index=0)
             new_utxo_txin._script_pubkey = refund_out.script_pubkey
@@ -130,7 +133,7 @@ class AddressManager():
 
             return tx_id
         except Exception as e:
-            print(f"Failed to broadcast transaction: {e}")
-            print(f"Transaction hex: {tx_hex}")
+            logger.error("Failed to broadcast transaction: %s", e)
+            logger.debug("Transaction hex: %s", tx_hex)
             raise
 

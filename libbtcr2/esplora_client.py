@@ -1,5 +1,8 @@
 import requests
 from typing import Dict, Optional, List
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class EsploraClient:
@@ -16,7 +19,9 @@ class EsploraClient:
     ) -> Dict:
         """Helper method to make HTTP requests"""
         url = f"{self.base_url}/{endpoint}"
+        logger.debug("%s %s", method, url)
         response = self.session.request(method, url, params=params, json=json)
+        logger.debug("Response status: %d", response.status_code)
         response.raise_for_status()
         return response.json()
 
@@ -102,6 +107,7 @@ class EsploraClient:
         Returns: the hex string of the transaction
         """
         url = f"{self.base_url}/tx/{txid}/hex"
+        logger.debug("GET %s", url)
         response = self.session.get(url)
         response.raise_for_status()
         return response.text
@@ -116,6 +122,8 @@ class EsploraClient:
         Returns: The txid will be returned on success.
         """
         url = f"{self.base_url}/tx"
+        logger.debug("POST %s", url)
         response = self.session.post(url, tx_hex)
         response.raise_for_status()
+        logger.info("Broadcast tx: %s", response.text)
         return response.text

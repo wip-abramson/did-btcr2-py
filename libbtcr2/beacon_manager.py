@@ -1,6 +1,9 @@
 from buidl.tx import TxIn, TxOut, Tx
 from buidl.script import ScriptPubKey, address_to_script_pubkey
 from .address_manager import AddressManager
+import logging
+
+logger = logging.getLogger(__name__)
 
 class BeaconManager(AddressManager):
 
@@ -10,9 +13,10 @@ class BeaconManager(AddressManager):
         
         
     def construct_beacon_signal(self, commitment_bytes):
+        logger.debug("Constructing beacon signal for %s, commitment: %s", self.beacon_id, commitment_bytes.hex())
         if len(self.utxo_tx_ins) == 0:
             raise Exception(f"No UTXOs, fund beacon address {self.address}")
-        
+
         tx_in = self.utxo_tx_ins.pop(0)
 
         script_pubkey = ScriptPubKey([0x6a, commitment_bytes])
@@ -40,7 +44,7 @@ class BeaconManager(AddressManager):
     def sign_beacon_signal(self, pending_signal):
 
         signing_res = pending_signal.sign_input(0, self.signing_key)
-        print(signing_res)
+        logger.debug("Signing result: %s", signing_res)
         if not signing_res:
             raise Exception("Invalid Beacon Key, unable to sign signal")
         
