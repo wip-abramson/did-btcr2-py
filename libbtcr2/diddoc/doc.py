@@ -7,14 +7,14 @@ import jcs
 from typing import Any, List, Optional, Union, Annotated
 from pydantic import Field
 
-Btc1PossibleServiceTypes = Union[PossibleServiceTypes, ServiceBeaconTypes]
+Btcr2PossibleServiceTypes = Union[PossibleServiceTypes, ServiceBeaconTypes]
 
-class Btc1Document(DIDDocument):
+class Btcr2Document(DIDDocument):
     context: Annotated[List[Union[str, dict]], Field(alias="@context")] = [
         "https://www.w3.org/TR/did-1.1", 
-        "https://did-btc1/TBD/context"
+        "https://did-btcr2/TBD/context"
     ]
-    service: Optional[List[Btc1PossibleServiceTypes]] = None
+    service: Optional[List[Btcr2PossibleServiceTypes]] = None
 
 
     def canonicalize(self):
@@ -25,17 +25,8 @@ class Btc1Document(DIDDocument):
         return [service for service in self.service if service.type in BeaconTypeNames]
     
 
-    # service: Optional[List[ServiceBeaconTypes]] = None
-
-    # @classmethod
-    # def deserialize(cls, value: dict) -> "Btc1Document":
-    #     """Wrap deserialization with a basic validation pass before matching to type."""
-    #     DIDDocument.deserialize(value)
-    #     return super(Btc1Document, cls).deserialize(value)
-    
-
     @classmethod
-    def deserialize(cls, value: dict) -> "Btc1Document":
+    def deserialize(cls, value: dict) -> "Btcr2Document":
         # Make a copy to avoid modifying the input
         value_copy = value.copy()
         
@@ -58,12 +49,12 @@ class Btc1Document(DIDDocument):
     
 
 
-class IntermediateBtc1DIDDocument(Btc1Document):
+class IntermediateBtcr2DIDDocument(Btcr2Document):
 
     id: DID = PLACEHOLDER_DID
 
-    def to_did_document(self, did: DID) -> Btc1Document:
-        did_document = Btc1Document.deserialize(self.model_copy(deep=True).serialize())
+    def to_did_document(self, did: DID) -> Btcr2Document:
+        did_document = Btcr2Document.deserialize(self.model_copy(deep=True).serialize())
 
         did_document.id = did
 
@@ -145,7 +136,7 @@ class IntermediateBtc1DIDDocument(Btc1Document):
        
     @staticmethod
     def from_did_document(did_document):
-        intermediate_doc: IntermediateBtc1DIDDocument = did_document.model_copy(deep=True)
+        intermediate_doc: IntermediateBtcr2DIDDocument = did_document.model_copy(deep=True)
 
         did = did_document.id
         intermediate_doc.id = PLACEHOLDER_DID

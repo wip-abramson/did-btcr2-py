@@ -1,4 +1,4 @@
-from .builder import Btc1DIDDocumentBuilder
+from .builder import Btcr2DIDDocumentBuilder
 from pydid.verification_method import VerificationMethod
 import jsonpatch
 from pydid.doc import DIDDocument
@@ -12,9 +12,9 @@ from di_bip340.data_integrity_proof import DataIntegrityProof
 from di_bip340.multikey import SchnorrSecp256k1Multikey
 import urllib
 
-class Btc1DIDDocumentUpdater():
+class Btcr2DIDDocumentUpdater():
 
-    def __init__(self, document_builder: Btc1DIDDocumentBuilder, version):
+    def __init__(self, document_builder: Btcr2DIDDocumentBuilder, version):
         self.builder = document_builder
         self.current_version = version
         self.current_document = self.builder.build().model_copy(deep=True)
@@ -76,7 +76,7 @@ class Btc1DIDDocumentUpdater():
                 'https://w3id.org/security/v2',
                 'https://w3id.org/zcap/v1',
                 'https://w3id.org/json-ld-patch/v1'
-                # TODO did:btc1 zcap context
+                # TODO did:btcr2 zcap context
             ],
             'patch': self.update_patch,
             # TODO: this might not go here?
@@ -127,7 +127,7 @@ class Btc1DIDDocumentUpdater():
         return secured_did_update_payload
     
 
-# class Btc1UpdatePayload():
+# class Btcr2UpdatePayload():
 
 #     def __init__(self, current_document, version, patch):
 #         json_patch = jsonpatch.JsonPatch(patch)
@@ -140,7 +140,7 @@ class Btc1DIDDocumentUpdater():
 #                 'https://w3id.org/security/v2',
 #                 'https://w3id.org/zcap/v1',
 #                 'https://w3id.org/json-ld-patch/v1'
-#                 # TODO did:btc1 zcap context
+#                 # TODO did:btcr2 zcap context
 #             ],
 #             'patch': self.update_patch,
 #             # TODO: this might not go here?

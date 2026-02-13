@@ -1,6 +1,6 @@
 from unittest import TestCase, IsolatedAsyncioTestCase
 from buidl.ecc import S256Point, PrivateKey, N
-from libbtc1.did_manager import DIDManager
+from libbtcr2.did_manager import DIDManager
 from random import randint
 
 class DIDManagerTest(IsolatedAsyncioTestCase):
@@ -10,7 +10,7 @@ class DIDManagerTest(IsolatedAsyncioTestCase):
     did_network = "bitcoin"
     btc_network = "mainnet"
 
-    expected_identifier = "did:btc1:k1qqpnp4206rw5yznwt7xnvf847dyzet34pauatur4806mamuu9kg670qvqx7vy"
+    expected_identifier = "did:btcr2:k1qqpnp4206rw5yznwt7xnvf847dyzet34pauatur4806mamuu9kg670qvqx7vy"
 
     async def test_deterministic_did(self):
 

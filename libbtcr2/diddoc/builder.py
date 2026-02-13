@@ -9,11 +9,11 @@ from buidl.ecc import S256Point
 from ..service import SingletonBeaconService
 from ..did import PLACEHOLDER_DID, KEY
 from typing import Iterator, List, Optional, Type, Union
-from .doc import IntermediateBtc1DIDDocument, Btc1Document
+from .doc import IntermediateBtcr2DIDDocument, Btcr2Document
 from ..did import encode_identifier
 from ..multikey import get_public_key_multibase
 
-class Btc1ServiceBuilder(ServiceBuilder):
+class Btcr2ServiceBuilder(ServiceBuilder):
 
     def add_singleton_beacon(self, beacon_address: str, ident: Optional[str] = None):
         ident = ident or next(self._id_generator)
@@ -31,7 +31,7 @@ class Btc1ServiceBuilder(ServiceBuilder):
 
     
 
-class Btc1DIDDocumentBuilder(DIDDocumentBuilder):
+class Btcr2DIDDocumentBuilder(DIDDocumentBuilder):
 
     def __init__(
         self,
@@ -43,28 +43,28 @@ class Btc1DIDDocumentBuilder(DIDDocumentBuilder):
     ):
         super().__init__(id=id, context=context, also_known_as=also_known_as, controller=controller)
         self.context = context or self.__default_context()
-        self.service = Btc1ServiceBuilder(self.id)
+        self.service = Btcr2ServiceBuilder(self.id)
 
     @staticmethod
     def __default_context() -> List[str]:
-        return ["https://www.w3.org/TR/did-1.1", "https://did-btc1/TBD/context"]
+        return ["https://www.w3.org/TR/did-1.1", "https://did-btcr2/TBD/context"]
     
     @classmethod
     def from_secp256k1_key(cls, initial_key: S256Point, network="bitcoin", version=1):
         key_bytes = initial_key.sec()
-        did_btc1 = encode_identifier(KEY, version, network, key_bytes)
+        did_btcr2 = encode_identifier(KEY, version, network, key_bytes)
 
         builder = cls(
-            id=did_btc1,
+            id=did_btcr2,
         )
 
         vm_id = "initialKey"
 
         public_key_multibase = get_public_key_multibase(key_bytes)
 
-        verificationMethod = builder.verification_method.add(Multikey, vm_id, controller=did_btc1, public_key_multibase=public_key_multibase)
+        verificationMethod = builder.verification_method.add(Multikey, vm_id, controller=did_btcr2, public_key_multibase=public_key_multibase)
 
-        # vm = get_verification_method(btc1_identifier, initial_key, vm_id)
+        # vm = get_verification_method(btcr2_identifier, initial_key, vm_id)
 
         # did_document["verificationMethod"] = [vm]
 
@@ -94,8 +94,8 @@ class Btc1DIDDocumentBuilder(DIDDocumentBuilder):
 
         return builder
     
-    def build(self) -> Btc1Document:
-        return Btc1Document.model_construct(
+    def build(self) -> Btcr2Document:
+        return Btcr2Document.model_construct(
             id=self.id,
             context=self.context,
             also_known_as=self.also_known_as,
@@ -110,7 +110,7 @@ class Btc1DIDDocumentBuilder(DIDDocumentBuilder):
             **self.extra,
         )
 
-class IntermediateBtc1DIDDocumentBuilder(Btc1DIDDocumentBuilder):
+class IntermediateBtcr2DIDDocumentBuilder(Btcr2DIDDocumentBuilder):
     def __init__(
         self,
         context: List[str] = None,
@@ -120,8 +120,8 @@ class IntermediateBtc1DIDDocumentBuilder(Btc1DIDDocumentBuilder):
     ):
         super().__init__(id=PLACEHOLDER_DID, context=context, also_known_as=also_known_as, controller=controller)
 
-    def build(self) -> IntermediateBtc1DIDDocument:
-        return IntermediateBtc1DIDDocument.model_construct(
+    def build(self) -> IntermediateBtcr2DIDDocument:
+        return IntermediateBtcr2DIDDocument.model_construct(
             context=self.context,
             also_known_as=self.also_known_as,
             controller=self.controller,
@@ -136,7 +136,7 @@ class IntermediateBtc1DIDDocumentBuilder(Btc1DIDDocumentBuilder):
         )
     
     @classmethod
-    def from_doc(cls, doc: DIDDocument) -> "IntermediateBtc1DIDDocumentBuilder":
+    def from_doc(cls, doc: DIDDocument) -> "IntermediateBtcr2DIDDocumentBuilder":
         builder = cls(
             context=doc.context,
             also_known_as=doc.also_known_as,
@@ -163,6 +163,6 @@ class IntermediateBtc1DIDDocumentBuilder(Btc1DIDDocumentBuilder):
         builder.capability_delegation = RelationshipBuilder(
             PLACEHOLDER_DID, "capability-delegation", methods=doc.capability_delegation
         )
-        builder.service = Btc1ServiceBuilder(PLACEHOLDER_DID, services=doc.service)
+        builder.service = Btcr2ServiceBuilder(PLACEHOLDER_DID, services=doc.service)
         return builder
     

@@ -4,16 +4,16 @@ import jcs
 from buidl.helper import sha256
 from pydid.doc import DIDDocument
 from .did import PLACEHOLDER_DID
-from .diddoc.doc import IntermediateBtc1DIDDocument, Btc1Document
-from .diddoc.builder import Btc1DIDDocumentBuilder
-from .diddoc.updater import Btc1DIDDocumentUpdater
+from .diddoc.doc import IntermediateBtcr2DIDDocument, Btcr2Document
+from .diddoc.builder import Btcr2DIDDocumentBuilder
+from .diddoc.updater import Btcr2DIDDocumentUpdater
 from buidl.tx import Tx, TxIn, TxOut, SIGHASH_DEFAULT
 from buidl.script import ScriptPubKey, address_to_script_pubkey
 from buidl.ecc import PrivateKey
 import json
 from .beacon_manager import BeaconManager
 from .esplora_client import EsploraClient
-from .resolver import Btc1Resolver
+from .resolver import Btcr2Resolver
 
 
 
@@ -42,7 +42,7 @@ class DIDManager():
         
         public_key = initial_sk.point
 
-        builder = Btc1DIDDocumentBuilder.from_secp256k1_key(public_key, network, identifierVersion)
+        builder = Btcr2DIDDocumentBuilder.from_secp256k1_key(public_key, network, identifierVersion)
 
         did_document = builder.build()
 
@@ -63,7 +63,7 @@ class DIDManager():
 
         return did_document.id, did_document
 
-    def create_external(self, intermediate_document: IntermediateBtc1DIDDocument, network = "bitcoin", version = 1):
+    def create_external(self, intermediate_document: IntermediateBtcr2DIDDocument, network = "bitcoin", version = 1):
         if network not in NETWORKS:
             raise Exception(f"Invalid Network : {network}")
         
@@ -92,9 +92,9 @@ class DIDManager():
     
 
     def updater(self):
-        builder = Btc1DIDDocumentBuilder.from_doc(self.document.model_copy(deep=True))
+        builder = Btcr2DIDDocumentBuilder.from_doc(self.document.model_copy(deep=True))
         print(json.dumps(self.document.serialize(), indent=2))
-        updater = Btc1DIDDocumentUpdater(builder, self.version)
+        updater = Btcr2DIDDocumentUpdater(builder, self.version)
         return updater
     
     async def announce_update(self, beacon_id, secured_update):
@@ -186,7 +186,7 @@ class DIDManager():
         did_manager = cls(did_network, btc_network, esplora_base)
 
         did_manager.did = did
-        did_manager.document = Btc1Document.deserialize(document)
+        did_manager.document = Btcr2Document.deserialize(document)
 
         did_manager.version = version
         did_manager.signals_metadata = signals_metadata

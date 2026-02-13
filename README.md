@@ -1,4 +1,4 @@
-# Experimental did:btc1 Python Library
+# Experimental did:btcr2 Python Library
 
 > Warning: This is purely experimental and should not be used for production purposes.
 
@@ -20,5 +20,5 @@ Commands are based on a linux environment. They may be slightly different for wi
 This installs the package from the main branch of the respository. As this is an experimental, poc implementation there is no pip package available for the time being.
 
 ```
-pip install libbtc1@git+https://github.com/LegReq/did-btc1-py
+pip install libbtcr2@git+https://github.com/DCD/did-btcr2-py
 ```

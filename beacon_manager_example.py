@@ -7,16 +7,16 @@ from pydid.doc.builder import VerificationMethodBuilder
 from pydid.did import DIDUrl
 import json
 import asyncio
-from libbtc1.did import encode_identifier, decode_identifier, PLACEHOLDER_DID
-from libbtc1.resolver import Btc1Resolver
-from libbtc1.service import SingletonBeaconService
-from libbtc1.diddoc.builder import Btc1DIDDocumentBuilder, IntermediateBtc1DIDDocumentBuilder
-from libbtc1.multikey import get_public_key_multibase
+from libbtcr2.did import encode_identifier, decode_identifier, PLACEHOLDER_DID
+from libbtcr2.resolver import Btcr2Resolver
+from libbtcr2.service import SingletonBeaconService
+from libbtcr2.diddoc.builder import Btcr2DIDDocumentBuilder, IntermediateBtcr2DIDDocumentBuilder
+from libbtcr2.multikey import get_public_key_multibase
 import os
 from bitcoinrpc import BitcoinRPC
-from libbtc1.did_manager import DIDManager
-from libbtc1.diddoc.builder import Btc1ServiceBuilder
-from libbtc1.beacon_manager import BeaconManager
+from libbtcr2.did_manager import DIDManager
+from libbtcr2.diddoc.builder import Btcr2ServiceBuilder
+from libbtcr2.beacon_manager import BeaconManager
 
 async def test_beacon_manager():
 
@@ -28,7 +28,7 @@ async def test_beacon_manager():
     root_hdpriv = HDPrivateKey.from_mnemonic(mnemonic, network="regtest")
     print("Mnemonic : ", mnemonic)
     
-    builder = IntermediateBtc1DIDDocumentBuilder(controller=[PLACEHOLDER_DID])
+    builder = IntermediateBtcr2DIDDocumentBuilder(controller=[PLACEHOLDER_DID])
 
     auth_sk = root_hdpriv.get_private_key(didkey_purpose, address_num=0)
     auth_pk = auth_sk.point

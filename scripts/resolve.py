@@ -1,4 +1,4 @@
-from libbtc1.resolver import Btc1Resolver
+from libbtcr2.resolver import Btcr2Resolver
 import asyncio
 import json
 from buidl.helper import sha256, bytes_to_str
@@ -44,7 +44,7 @@ async def resolve_did():
 
     
 
-    resolver = Btc1Resolver(networkDefinitions=networkDefinitions, logging=True)
+    resolver = Btcr2Resolver(networkDefinitions=networkDefinitions, logging=True)
     print(resolver.logging)
     resolution_result = await resolver.resolve(did_to_resolve, resolution_options)
 

@@ -18,14 +18,14 @@ from di_bip340.multikey import SchnorrSecp256k1Multikey
 from .bech32 import decode_bech32_identifier
 from .verificationMethod import get_verification_method
 from .did import decode_identifier, KEY, EXTERNAL, InvalidDidError
-from .diddoc.builder import Btc1DIDDocumentBuilder, IntermediateBtc1DIDDocumentBuilder
-from .diddoc.doc import Btc1Document, IntermediateBtc1DIDDocument
+from .diddoc.builder import Btcr2DIDDocumentBuilder, IntermediateBtcr2DIDDocumentBuilder
+from .diddoc.doc import Btcr2Document, IntermediateBtcr2DIDDocument
 from .helper import canonicalize_and_hash
 from .service import BeaconTypeNames, SingletonBeaconService
 from .esplora_client import EsploraClient
 import datetime
 
-CONTEXT = ["https://www.w3.org/ns/did/v1", "https://did-btc1/TBD/context"]
+CONTEXT = ["https://www.w3.org/ns/did/v1", "https://did-btcr2/TBD/context"]
 
 
 GENESIS_COINBASE = "4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"
@@ -44,7 +44,7 @@ DEFAULT_NETWORK_DEFINITIONS = {
 }
 
 
-class Btc1Resolver():
+class Btcr2Resolver():
     
     def __init__(self, networkDefinitions=DEFAULT_NETWORK_DEFINITIONS, logging=False, log_folder="TestVectors"):
         self.logging = logging
@@ -112,42 +112,42 @@ class Btc1Resolver():
 
 
 
-    def resolve_deterministic(self, btc1_identifier, key_bytes, version, network):
+    def resolve_deterministic(self, btcr2_identifier, key_bytes, version, network):
 
         pubkey = S256Point.parse_sec(key_bytes)
 
-        builder = Btc1DIDDocumentBuilder.from_secp256k1_key(pubkey, network, version)
+        builder = Btcr2DIDDocumentBuilder.from_secp256k1_key(pubkey, network, version)
 
         did_document = builder.build()
 
-        if btc1_identifier != did_document.id:
+        if btcr2_identifier != did_document.id:
             raise InvalidDidError("identifier does not match, deterministic document id")
 
         return did_document
     
-    async def resolve_external(self, btc1_identifier, genesis_bytes, version, network, resolution_options):
+    async def resolve_external(self, btcr2_identifier, genesis_bytes, version, network, resolution_options):
         sidecar_data = resolution_options.get("sidecarData")
         initial_document = None
         if sidecar_data:
             doc_json = sidecar_data.get("initialDocument")
             print("Sidecar Initial External Resolve")
             print(json.dumps(doc_json, indent=2))
-            initial_document = Btc1Document.deserialize(doc_json)
+            initial_document = Btcr2Document.deserialize(doc_json)
             
         
         if initial_document:
-            initial_document = self.sidecar_initial_document_validation(btc1_identifier, genesis_bytes, version, network, initial_document)
+            initial_document = self.sidecar_initial_document_validation(btcr2_identifier, genesis_bytes, version, network, initial_document)
         else:
-            initial_document = self.cas_retrieval(btc1_identifier, genesis_bytes, version, network)
+            initial_document = self.cas_retrieval(btcr2_identifier, genesis_bytes, version, network)
 
         # TODO: validate initial document
 
         return initial_document
 
-    def sidecar_initial_document_validation(self, btc1_identifier, genesis_bytes, version, network, initial_document):
+    def sidecar_initial_document_validation(self, btcr2_identifier, genesis_bytes, version, network, initial_document):
         print("Initial Doc ")
         print(json.dumps(initial_document.serialize(), indent=2))    
-        intermediate_doc = IntermediateBtc1DIDDocument.from_did_document(initial_document)
+        intermediate_doc = IntermediateBtcr2DIDDocument.from_did_document(initial_document)
         
         print("Intermediate Doc ")
         print(json.dumps(intermediate_doc.serialize(), indent=2))
@@ -160,7 +160,7 @@ class Btc1Resolver():
 
         return initial_document
     
-    async def cas_retrieval(self, btc1_identifier, genesis_bytes, version, network):
+    async def cas_retrieval(self, btcr2_identifier, genesis_bytes, version, network):
         cid = cid_sha256_wrap_digest(genesis_bytes)
         # TODO: Attempt to fetch content for CID from IPFS
         raise NotImplemented
@@ -206,7 +206,7 @@ class Btc1Resolver():
     
 
     async def traverse_blockchain_history(self, 
-                                          contemporary_document: Btc1Document, 
+                                          contemporary_document: Btcr2Document, 
                                           contemporary_blockheight, 
                                           current_version_id, 
                                           request_version_id, 
@@ -412,12 +412,12 @@ class Btc1Resolver():
         root_capability = self.dereference_root_capability(capability_id)
         
         proof_vm_id = update["proof"]["verificationMethod"]
-        btc1_identifier = document_to_update.id
+        btcr2_identifier = document_to_update.id
         verification_method = None
         for vm in document_to_update.verification_method:
             vm_id = vm.id
             if vm_id[0] == "#":
-                vm_id = f"{btc1_identifier}{vm_id}"
+                vm_id = f"{btcr2_identifier}{vm_id}"
             if vm_id == proof_vm_id:
                 print("Verification Method found", vm)
                 verification_method = vm.serialize()
@@ -461,7 +461,7 @@ class Btc1Resolver():
 
         target_hash = bytes_to_str(base58.b58encode(sha256(jcs.canonicalize(target_did_document))))
 
-        target_doc = Btc1Document.model_validate(target_did_document)
+        target_doc = Btcr2Document.model_validate(target_did_document)
         
         serialzied_doc = target_doc.serialize()
         
@@ -477,7 +477,7 @@ class Btc1Resolver():
         if (target_hash != test_hash):
             raise Exception("LatePublishingError")
 
-        return Btc1Document.deserialize(target_did_document)
+        return Btcr2Document.deserialize(target_did_document)
     
     
 
@@ -489,12 +489,12 @@ class Btc1Resolver():
         assert(components[1] == "zcap")
         assert(components[2] == "root")
         uri_encoded_id = components[3]
-        btc1Identifier = urllib.parse.unquote(uri_encoded_id)
+        btcr2Identifier = urllib.parse.unquote(uri_encoded_id)
         root_capability = {
             "@context": "https://w3id.org/zcap/v1",
             "id": capability_id,
-            "controller": btc1Identifier,
-            "invocationTarget": btc1Identifier
+            "controller": btcr2Identifier,
+            "invocationTarget": btcr2Identifier
         }
         return root_capability
 

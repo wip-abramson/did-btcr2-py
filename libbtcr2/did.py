@@ -45,9 +45,9 @@ P2TR = "p2tr"
 
 SINGLETON_BEACON_TYPE = "SingletonBeacon"
 
-CONTEXT = ["https://www.w3.org/ns/did/v1", "https://did-btc1/TBD/context"]
+CONTEXT = ["https://www.w3.org/ns/did/v1", "https://did-btcr2/TBD/context"]
 
-PLACEHOLDER_DID = "did:btc1:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+PLACEHOLDER_DID = "did:btcr2:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 
 
 
@@ -100,7 +100,7 @@ def encode_identifier(id_type, version, network, genesis_bytes):
 
     data_bytes += bytearray(genesis_bytes)
 
-    identifier = "did:btc1:"
+    identifier = "did:btcr2:"
 
     encoded_string = encode_bech32_identifier(hrp, data_bytes)
 
@@ -118,7 +118,7 @@ def decode_identifier(identifier):
     if components[0] != "did":
         raise InvalidDidError()
 
-    if components[1] != "btc1":
+    if components[1] != "btcr2":
         raise Exception("methodNotSupported")
     
     encoded_string = components[2]
