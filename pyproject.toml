@@ -3,6 +3,19 @@ name = "libbtcr2"
 version = "0.3.2"
 description = "Experimental python implementation of the did:btcr2 Method Specification"
 requires-python = ">=3.10"
+dependencies = [
+    "buidl @ git+https://github.com/buidl-bitcoin/buidl-python@c0b7d57",
+    "multiformats",
+    "pydid",
+    "jcs",
+    "bitcoinrpc",
+    "sparse-merkle-tree",
+    "ipfshttpclient",
+    "ipfs-cid",
+    "di-bip340 @ git+https://github.com/LegReq/di-bip340-python",
+    "base58",
+    "jsonpatch",
+]
 
 [tool.ruff]
 line-length = 100
