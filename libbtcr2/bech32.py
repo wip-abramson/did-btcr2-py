@@ -1,7 +1,13 @@
-from buidl.bech32 import bc32encode, BECH32_ALPHABET, encode_bech32, convertbits, bech32m_create_checksum, bech32m_verify_checksum
-from buidl.helper import int_to_big_endian
+from buidl.bech32 import (
+    BECH32_ALPHABET,
+    bech32m_create_checksum,
+    bech32m_verify_checksum,
+    convertbits,
+    encode_bech32,
+)
 
-from .constants import ID_TYPE_TO_HRP as PREFIX, HRP_TO_ID_TYPE as TYPE_FOR_PREFIX, BECH32_CHECKSUM_LEN
+from .constants import BECH32_CHECKSUM_LEN
+from .constants import HRP_TO_ID_TYPE as TYPE_FOR_PREFIX
 
 
 def encode_bech32_identifier(hrp, value):
@@ -10,6 +16,7 @@ def encode_bech32_identifier(hrp, value):
     encoded = encode_bech32(data + checksum)
 
     return hrp + "1" + encoded
+
 
 def decode_bech32_identifier(value):
     hrp, raw_data = value.split("1")

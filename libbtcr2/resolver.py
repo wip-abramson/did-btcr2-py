@@ -1,45 +1,47 @@
-from buidl.ecc import S256Point
-from buidl.tx import Tx
-from buidl.helper import sha256, bytes_to_str
+import copy
+import datetime
+import json
+import logging
+import os
+import urllib
+
 import base58
 import jcs
-import os
-import json
-import copy
-from ipfs_cid import cid_sha256_wrap_digest
-import urllib
 import jsonpatch
-from pydid.doc import DIDDocument
-from pydid.doc.builder import VerificationMethodBuilder
-from pydid.verification_method import Multikey
+from buidl.ecc import S256Point
+from buidl.helper import bytes_to_str, sha256
+from buidl.tx import Tx
 from di_bip340.cryptosuite import Bip340JcsCryptoSuite
 from di_bip340.data_integrity_proof import DataIntegrityProof
 from di_bip340.multikey import SchnorrSecp256k1Multikey
-from .bech32 import decode_bech32_identifier
-from .verificationMethod import get_verification_method
-from .did import decode_identifier, InvalidDidError
+from ipfs_cid import cid_sha256_wrap_digest
+from pydid.doc import DIDDocument
+
 from .constants import (
-    KEY, EXTERNAL,
-    DID_CONTEXT, GENESIS_COINBASE, COINBASE_TXIDS,
-    SINGLETON_BEACON_TYPE, P2PKH, P2WPKH, P2TR,
-    OP_RETURN, ZCAP_CONTEXT, PROOF_PURPOSE,
+    EXTERNAL,
+    KEY,
+    OP_RETURN,
+    PROOF_PURPOSE,
+    SINGLETON_BEACON_TYPE,
+    ZCAP_CONTEXT,
 )
-from .network_config import DEFAULT_NETWORK_DEFINITIONS
-from .diddoc.builder import Btcr2DIDDocumentBuilder, IntermediateBtcr2DIDDocumentBuilder
+from .did import InvalidDidError, decode_identifier
+from .diddoc.builder import Btcr2DIDDocumentBuilder
 from .diddoc.doc import Btcr2Document, IntermediateBtcr2DIDDocument
-from .helper import canonicalize_and_hash
-from .service import BeaconTypeNames, SingletonBeaconService
 from .esplora_client import EsploraClient
-import datetime
-import logging
+from .network_config import DEFAULT_NETWORK_DEFINITIONS
+from .service import BeaconTypeNames
 
 logger = logging.getLogger(__name__)
 
 
-
-class Btcr2Resolver():
-
-    def __init__(self, networkDefinitions=DEFAULT_NETWORK_DEFINITIONS, logging=False, log_folder="TestVectors"):
+class Btcr2Resolver:
+    def __init__(
+        self,
+        networkDefinitions=DEFAULT_NETWORK_DEFINITIONS,
+        logging=False,
+        log_folder="TestVectors",
+    ):
         self.logging = logging
         self.log_base_folder = log_folder
         self.networks = self.configure_networks(networkDefinitions)
@@ -63,20 +65,20 @@ class Btcr2Resolver():
 
         logger.info("ID Components: %s %s %s %s", id_type, version, network, genesis_bytes.hex())
 
-        if self.logging == True:
+        if self.logging:
             did_path = identifier.split(":")[2]
             self.log_folder = f"{self.log_base_folder}/{network}/{did_path}"
             if not os.path.exists(self.log_folder):
                 os.makedirs(self.log_folder)
 
-
         if id_type == KEY:
-            initial_did_document = self.resolve_deterministic(identifier,
-                                                        genesis_bytes,
-                                                        version,
-                                                        network)
+            initial_did_document = self.resolve_deterministic(
+                identifier, genesis_bytes, version, network
+            )
         elif id_type == EXTERNAL:
-            initial_did_document = await self.resolve_external(identifier, genesis_bytes, version, network, resolution_options)
+            initial_did_document = await self.resolve_external(
+                identifier, genesis_bytes, version, network, resolution_options
+            )
 
         else:
             raise Exception("Invalid HRP")
@@ -84,26 +86,20 @@ class Btcr2Resolver():
         # TODO: Process Beacon Signals
         logger.info("Initial DID document")
         logger.debug("%s", json.dumps(initial_did_document.serialize(), indent=2))
-        target_document, version_id = await self.resolve_target_document(initial_did_document, resolution_options, network)
-
+        target_document, version_id = await self.resolve_target_document(
+            initial_did_document, resolution_options, network
+        )
 
         logger.info("Target DID document")
         logger.debug("%s", target_document)
 
         resolution_result = {
             "didDocument": target_document.serialize(),
-            "didResolutionMetadata": {
-
-            },
-            "didDocumentMetadata": {
-                "network": network,
-                "version": version_id
-            }
+            "didResolutionMetadata": {},
+            "didDocumentMetadata": {"network": network, "version": version_id},
         }
 
         return resolution_result
-
-
 
     def resolve_deterministic(self, btcr2_identifier, key_bytes, version, network):
         logger.debug("Resolving deterministic DID: %s", btcr2_identifier)
@@ -118,7 +114,9 @@ class Btcr2Resolver():
 
         return did_document
 
-    async def resolve_external(self, btcr2_identifier, genesis_bytes, version, network, resolution_options):
+    async def resolve_external(
+        self, btcr2_identifier, genesis_bytes, version, network, resolution_options
+    ):
         sidecar_data = resolution_options.get("sidecarData")
         initial_document = None
         if sidecar_data:
@@ -127,9 +125,10 @@ class Btcr2Resolver():
             logger.debug("%s", json.dumps(doc_json, indent=2))
             initial_document = Btcr2Document.deserialize(doc_json)
 
-
         if initial_document:
-            initial_document = self.sidecar_initial_document_validation(btcr2_identifier, genesis_bytes, version, network, initial_document)
+            initial_document = self.sidecar_initial_document_validation(
+                btcr2_identifier, genesis_bytes, version, network, initial_document
+            )
         else:
             initial_document = self.cas_retrieval(btcr2_identifier, genesis_bytes, version, network)
 
@@ -137,7 +136,9 @@ class Btcr2Resolver():
 
         return initial_document
 
-    def sidecar_initial_document_validation(self, btcr2_identifier, genesis_bytes, version, network, initial_document):
+    def sidecar_initial_document_validation(
+        self, btcr2_identifier, genesis_bytes, version, network, initial_document
+    ):
         logger.info("Initial Doc")
         logger.debug("%s", json.dumps(initial_document.serialize(), indent=2))
         intermediate_doc = IntermediateBtcr2DIDDocument.from_did_document(initial_document)
@@ -149,19 +150,27 @@ class Btcr2Resolver():
         hash_bytes = intermediate_doc.canonicalize()
 
         if hash_bytes != genesis_bytes:
-            raise InvalidDidError("Initial document provided, does not match identifier genesis bytes")
+            raise InvalidDidError(
+                "Initial document provided, does not match identifier genesis bytes"
+            )
 
         return initial_document
 
     async def cas_retrieval(self, btcr2_identifier, genesis_bytes, version, network):
-        cid = cid_sha256_wrap_digest(genesis_bytes)
+        cid_sha256_wrap_digest(genesis_bytes)
         # TODO: Attempt to fetch content for CID from IPFS
-        raise NotImplemented
+        raise NotImplementedError
 
-    async def resolve_target_document(self, initial_document: DIDDocument, resolution_options, network):
+    async def resolve_target_document(
+        self, initial_document: DIDDocument, resolution_options, network
+    ):
         request_version_id = resolution_options.get("versionId")
         version_time = resolution_options.get("versionTime")
-        logger.debug("Resolving target document: versionId=%s, versionTime=%s", request_version_id, version_time)
+        logger.debug(
+            "Resolving target document: versionId=%s, versionTime=%s",
+            request_version_id,
+            version_time,
+        )
 
         if request_version_id and version_time:
             raise Exception("InvalidResolutionOptions - cannot have versionTime and versionId")
@@ -186,28 +195,30 @@ class Btcr2Resolver():
 
         contemporary_document = initial_document.model_copy()
 
-        target_document, current_version_id = await self.traverse_blockchain_history(contemporary_document,
-                                                           contemporary_blockheight,
-                                                           current_version_id,
-                                                           request_version_id,
-                                                           version_time,
-                                                           update_hash_history,
-                                                           signals_metadata,
-                                                           network)
+        target_document, current_version_id = await self.traverse_blockchain_history(
+            contemporary_document,
+            contemporary_blockheight,
+            current_version_id,
+            request_version_id,
+            version_time,
+            update_hash_history,
+            signals_metadata,
+            network,
+        )
 
         return target_document, current_version_id
 
-
-
-    async def traverse_blockchain_history(self,
-                                          contemporary_document: Btcr2Document,
-                                          contemporary_blockheight,
-                                          current_version_id,
-                                          request_version_id,
-                                          target_time,
-                                          update_hash_history,
-                                          signals_metadata,
-                                          network):
+    async def traverse_blockchain_history(
+        self,
+        contemporary_document: Btcr2Document,
+        contemporary_blockheight,
+        current_version_id,
+        request_version_id,
+        target_time,
+        update_hash_history,
+        signals_metadata,
+        network,
+    ):
         contemporary_hash = contemporary_document.model_copy(deep=True).canonicalize()
         beacons = []
         for service in contemporary_document.service:
@@ -220,12 +231,9 @@ class Btcr2Resolver():
         if len(next_signals) == 0:
             return contemporary_document, current_version_id
 
-
         # print("Next Signals", next_signals[0]['status']["block_time"], target_time)
         if next_signals[0]["block_time"] > target_time:
             return contemporary_document, current_version_id
-
-
 
         contemporary_blockheight = next_signals[0]["block_height"]
         logger.debug("Block height: %s, target time: %s", contemporary_blockheight, target_time)
@@ -248,7 +256,6 @@ class Btcr2Resolver():
             #         serialized_signals["signals"][index] = tx.serialize().hex()
             #     json.dump(serialized_signals, f, indent=2)
 
-
             updates_path = f"{self.block_folder}/updates.json"
 
             with open(updates_path, "w") as f:
@@ -261,11 +268,17 @@ class Btcr2Resolver():
             if target_version_id <= current_version_id:
                 self.confirm_duplicate_update(update, update_hash_history)
             elif target_version_id == current_version_id + 1:
-                logger.debug("Source hash: %s, contemporary hash: %s", update["sourceHash"], bytes_to_str(base58.b58encode(contemporary_hash)))
+                logger.debug(
+                    "Source hash: %s, contemporary hash: %s",
+                    update["sourceHash"],
+                    bytes_to_str(base58.b58encode(contemporary_hash)),
+                )
                 if update["sourceHash"] != bytes_to_str(base58.b58encode(contemporary_hash)):
                     raise Exception("Late Publishing")
                 logger.info("Apply DID Update: %s", update)
-                contemporary_document = self.apply_did_update(contemporary_document, update).model_copy(deep=True)
+                contemporary_document = self.apply_did_update(
+                    contemporary_document, update
+                ).model_copy(deep=True)
                 if self.logging:
                     contemporary_path = f"{self.block_folder}/contemporaryDidDocument.json"
                     with open(contemporary_path, "w") as f:
@@ -274,13 +287,19 @@ class Btcr2Resolver():
                 current_version_id += 1
                 updateHash = sha256(jcs.canonicalize(update))
                 update_hash_history.append(updateHash)
-                contemporary_hash = bytes_to_str(base58.b58encode(contemporary_document.canonicalize()))
+                contemporary_hash = bytes_to_str(
+                    base58.b58encode(contemporary_document.canonicalize())
+                )
                 if current_version_id == request_version_id:
                     logger.info("Found document for target version: %s", contemporary_document)
                     return contemporary_document, current_version_id
 
             elif target_version_id > current_version_id + 1:
-                logger.debug("target_version_id: %s, current_version_id: %s", target_version_id, current_version_id)
+                logger.debug(
+                    "target_version_id: %s, current_version_id: %s",
+                    target_version_id,
+                    current_version_id,
+                )
                 raise Exception(f"Late publishing {target_version_id} {current_version_id}")
 
         logger.debug("Tracking: %s %s", contemporary_blockheight, target_time)
@@ -290,58 +309,60 @@ class Btcr2Resolver():
 
         contemporary_blockheight += 1
 
-        target_document, current_version_id = await self.traverse_blockchain_history(contemporary_document,
-                                                            contemporary_blockheight,
-                                                            current_version_id,
-                                                            request_version_id,
-                                                            target_time,
-                                                            update_hash_history,
-                                                            signals_metadata,
-                                                            network)
+        target_document, current_version_id = await self.traverse_blockchain_history(
+            contemporary_document,
+            contemporary_blockheight,
+            current_version_id,
+            request_version_id,
+            target_time,
+            update_hash_history,
+            signals_metadata,
+            network,
+        )
 
         return target_document, current_version_id
 
     async def find_next_signals(self, beacons, contemporary_blockheight, network):
         signals = []
         esplora_client = self.networks[network]["esplora_client"]
-        logger.debug("Scanning %d beacons from block height %s", len(beacons), contemporary_blockheight)
+        logger.debug(
+            "Scanning %d beacons from block height %s", len(beacons), contemporary_blockheight
+        )
         for beacon in beacons:
             address = beacon.address()
             logger.debug("Checking beacon %s at address %s", beacon.id, address)
             txs = esplora_client.get_address_transactions(address)
             for tx_data in txs:
-            # Only care about bitcoin transactions that have been accepted into the chain.
+                # Only care about bitcoin transactions that have been accepted into the chain.
 
                 # Skip transactions that haven't been confirmed yet or are from earlier blocks
-                if 'status' not in tx_data or 'block_height' not in tx_data['status']:
+                if "status" not in tx_data or "block_height" not in tx_data["status"]:
                     continue
-                if tx_data['status']['block_height'] < contemporary_blockheight:
+                if tx_data["status"]["block_height"] < contemporary_blockheight:
                     continue
 
-                if any(vin['prevout']['scriptpubkey_address'] == address for vin in tx_data['vin']):
-                    tx_hex = esplora_client.get_transaction_hex(tx_data['txid'])
+                if any(vin["prevout"]["scriptpubkey_address"] == address for vin in tx_data["vin"]):
+                    tx_hex = esplora_client.get_transaction_hex(tx_data["txid"])
                     tx = Tx.parse_hex(tx_hex)
                     signal = {
                         "beaconId": beacon.id,
                         "beaconType": beacon.type,
                         "tx": tx,
-                        "block_height": tx_data['status']['block_height'],
-                        "block_time": tx_data['status']['block_time']
+                        "block_height": tx_data["status"]["block_height"],
+                        "block_time": tx_data["status"]["block_time"],
                     }
                     signals.append(signal)
 
-
         # Sort signals by block height
-        signals.sort(key=lambda signal: signal['block_height'])
+        signals.sort(key=lambda signal: signal["block_height"])
 
         # Only keep signals from the earliest block height found
         if signals:
-            min_height = signals[0]['block_height']
-            signals = [signal for signal in signals if signal['block_height'] == min_height]
+            min_height = signals[0]["block_height"]
+            signals = [signal for signal in signals if signal["block_height"] == min_height]
 
         logger.debug("Found %d signals at earliest block height", len(signals))
         return signals
-
 
     def process_beacon_signals(self, signals, signals_metadata):
         updates = []
@@ -354,7 +375,9 @@ class Btcr2Resolver():
             did_update_payload = None
             if type == SINGLETON_BEACON_TYPE:
                 logger.debug("Signal ID: %s", signal_id)
-                did_update_payload = self.process_singleton_beacon_signal(signal_tx, signal_sidecar_data)
+                did_update_payload = self.process_singleton_beacon_signal(
+                    signal_tx, signal_sidecar_data
+                )
 
             if did_update_payload:
                 updates.append(did_update_payload)
@@ -365,7 +388,10 @@ class Btcr2Resolver():
         tx_out = tx.tx_outs[len(tx.tx_outs) - 1]
         did_update_payload = None
         logger.debug("TX OUT: %s", tx_out.script_pubkey.commands[1])
-        if (tx_out.script_pubkey.commands[0] != OP_RETURN and len(tx_out.script_pubkey.commands[1]) != 32):
+        if (
+            tx_out.script_pubkey.commands[0] != OP_RETURN
+            and len(tx_out.script_pubkey.commands[1]) != 32
+        ):
             logger.warning("Not a beacon signal")
             return did_update_payload
 
@@ -385,10 +411,9 @@ class Btcr2Resolver():
 
             return did_update_payload
         else:
-            payload_cid = cid_sha256_wrap_digest(hash_bytes)
+            cid_sha256_wrap_digest(hash_bytes)
             # TODO: Fetch payload from IPFS
             raise Exception("Not implemented")
-
 
     def confirm_duplicate_update(self, update, update_hash_history):
 
@@ -396,17 +421,20 @@ class Btcr2Resolver():
         # Note: version starts at 1, index starts at 0
         update_hash_index = update["targetVersionId"] - 2
         historical_update_hash = update_hash_history[update_hash_index]
-        if (historical_update_hash != update_hash):
+        if historical_update_hash != update_hash:
             raise Exception("Late Publishing Error")
         return
 
-
     def apply_did_update(self, contemporary_document, update):
-        # Retrieve the verification method used to secure the proof from the contemporary DID document
+        # Retrieve the verification method used to secure the proof from the
+        # contemporary DID document
         capability_id = update["proof"]["capability"]
         document_to_update = contemporary_document.model_copy(deep=True)
 
         root_capability = self.dereference_root_capability(capability_id)
+
+        if root_capability["controller"] != document_to_update.id:
+            raise Exception("Invalid Capability Invocation")
 
         proof_vm_id = update["proof"]["verificationMethod"]
         btcr2_identifier = document_to_update.id
@@ -418,7 +446,7 @@ class Btcr2Resolver():
             if vm_id == proof_vm_id:
                 logger.debug("Verification Method found: %s", vm)
                 verification_method = vm.serialize()
-        if verification_method == None:
+        if verification_method is None:
             raise Exception("Invalid Proof on Update Payload")
         multikey = SchnorrSecp256k1Multikey.from_verification_method(verification_method)
 
@@ -442,8 +470,9 @@ class Btcr2Resolver():
             with open(f"{self.block_folder}/update_hash_hex.txt", "w") as f:
                 f.write(update_hash.hex())
 
-
-        verificationResult = di_proof.verify_proof(mediaType, update_bytes, expected_proof_purpose, None, None)
+        verificationResult = di_proof.verify_proof(
+            mediaType, update_bytes, expected_proof_purpose, None, None
+        )
         logger.debug("Proof verification result: %s", verificationResult)
 
         if not verificationResult["verified"]:
@@ -465,41 +494,35 @@ class Btcr2Resolver():
 
         compare_dictionaries(serialzied_doc, target_did_document)
 
-
         test_hash = bytes_to_str(base58.b58encode(target_doc.canonicalize()))
 
         logger.debug("Target hash check: %s %s", update["targetHash"], target_hash)
-        if (target_hash != update["targetHash"]):
+        if target_hash != update["targetHash"]:
             raise Exception("LatePublishingError")
 
-        if (target_hash != test_hash):
+        if target_hash != test_hash:
             raise Exception("LatePublishingError")
 
         return Btcr2Document.deserialize(target_did_document)
 
-
-
     def dereference_root_capability(self, capability_id):
 
         components = capability_id.split(":")
-        assert(len(components) == 4)
-        assert(components[0] == "urn")
-        assert(components[1] == "zcap")
-        assert(components[2] == "root")
+        assert len(components) == 4
+        assert components[0] == "urn"
+        assert components[1] == "zcap"
+        assert components[2] == "root"
         uri_encoded_id = components[3]
         btcr2Identifier = urllib.parse.unquote(uri_encoded_id)
-        root_capability = {
+        return {
             "@context": ZCAP_CONTEXT,
             "id": capability_id,
             "controller": btcr2Identifier,
-            "invocationTarget": btcr2Identifier
+            "invocationTarget": btcr2Identifier,
         }
-        return root_capability
+
 
 def compare_dictionaries(dict1, dict2):
     if len(dict1) != len(dict2):
         return False
-    for key in dict1:
-        if key not in dict2 or dict1[key] != dict2[key]:
-            return False
-    return True
+    return all(key in dict2 and dict1[key] == dict2[key] for key in dict1)

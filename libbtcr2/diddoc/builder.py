@@ -1,48 +1,46 @@
-from pydid.doc.builder import ServiceBuilder, DIDDocumentBuilder
-from pydid.did import DID
-from pydid.doc.builder import DIDDocumentBuilder, RelationshipBuilder, VerificationMethodBuilder
-from pydid.doc import DIDDocument
-from pydid.verification_method import Multikey
+import logging
 
 from buidl.ecc import S256Point
+from pydid.did import DID
+from pydid.doc import DIDDocument
+from pydid.doc.builder import (
+    DIDDocumentBuilder,
+    RelationshipBuilder,
+    ServiceBuilder,
+    VerificationMethodBuilder,
+)
+from pydid.verification_method import Multikey
 
-from ..service import SingletonBeaconService
-from ..constants import PLACEHOLDER_DID, KEY, DID_CONTEXT, NETWORK_DISPLAY_MAP
-from typing import Iterator, List, Optional, Type, Union
-from .doc import IntermediateBtcr2DIDDocument, Btcr2Document
+from ..constants import DID_CONTEXT, KEY, NETWORK_DISPLAY_MAP, PLACEHOLDER_DID
 from ..did import encode_identifier
 from ..multikey import get_public_key_multibase
-import logging
+from ..service import SingletonBeaconService
+from .doc import Btcr2Document, IntermediateBtcr2DIDDocument
 
 logger = logging.getLogger(__name__)
 
-class Btcr2ServiceBuilder(ServiceBuilder):
 
-    def add_singleton_beacon(self, beacon_address: str, ident: Optional[str] = None):
+class Btcr2ServiceBuilder(ServiceBuilder):
+    def add_singleton_beacon(self, beacon_address: str, ident: str | None = None):
         ident = ident or next(self._id_generator)
 
         service_endpoint = f"bitcoin:{beacon_address}"
         service = SingletonBeaconService.make(
-            id=self._did.ref(ident),
-            service_endpoint=service_endpoint
+            id=self._did.ref(ident), service_endpoint=service_endpoint
         )
 
         self.services.append(service)
         return service
 
 
-
-
-
 class Btcr2DIDDocumentBuilder(DIDDocumentBuilder):
-
     def __init__(
         self,
-        id: Union[str, DID],
-        context: List[str] = None,
+        id: str | DID,
+        context: list[str] = None,
         *,
-        also_known_as: List[str] = None,
-        controller: Union[List[str], List[DID]] = None,
+        also_known_as: list[str] = None,
+        controller: list[str] | list[DID] = None,
     ):
         super().__init__(id=id, context=context, also_known_as=also_known_as, controller=controller)
         self.context = context or list(DID_CONTEXT)
@@ -61,7 +59,9 @@ class Btcr2DIDDocumentBuilder(DIDDocumentBuilder):
 
         public_key_multibase = get_public_key_multibase(key_bytes)
 
-        verificationMethod = builder.verification_method.add(Multikey, vm_id, controller=did_btcr2, public_key_multibase=public_key_multibase)
+        verificationMethod = builder.verification_method.add(
+            Multikey, vm_id, controller=did_btcr2, public_key_multibase=public_key_multibase
+        )
 
         # vm = get_verification_method(btcr2_identifier, initial_key, vm_id)
 
@@ -107,15 +107,18 @@ class Btcr2DIDDocumentBuilder(DIDDocumentBuilder):
             **self.extra,
         )
 
+
 class IntermediateBtcr2DIDDocumentBuilder(Btcr2DIDDocumentBuilder):
     def __init__(
         self,
-        context: List[str] = None,
+        context: list[str] = None,
         *,
-        also_known_as: List[str] = None,
-        controller: Union[List[str], List[DID]] = None,
+        also_known_as: list[str] = None,
+        controller: list[str] | list[DID] = None,
     ):
-        super().__init__(id=PLACEHOLDER_DID, context=context, also_known_as=also_known_as, controller=controller)
+        super().__init__(
+            id=PLACEHOLDER_DID, context=context, also_known_as=also_known_as, controller=controller
+        )
 
     def build(self) -> IntermediateBtcr2DIDDocument:
         return IntermediateBtcr2DIDDocument.model_construct(

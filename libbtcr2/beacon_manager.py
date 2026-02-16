@@ -1,20 +1,25 @@
-from buidl.tx import TxIn, TxOut, Tx
-from buidl.script import ScriptPubKey, address_to_script_pubkey
+import logging
+
+from buidl.script import ScriptPubKey
+from buidl.tx import Tx, TxIn, TxOut
+
 from .address_manager import AddressManager
 from .constants import OP_RETURN
-import logging
 
 logger = logging.getLogger(__name__)
 
-class BeaconManager(AddressManager):
 
+class BeaconManager(AddressManager):
     def __init__(self, network, beacon_id, signing_key, script_pubkey, esplora_client):
         self.beacon_id = beacon_id
         super().__init__(esplora_client, network, script_pubkey, signing_key)
 
-
     def construct_beacon_signal(self, commitment_bytes):
-        logger.debug("Constructing beacon signal for %s, commitment: %s", self.beacon_id, commitment_bytes.hex())
+        logger.debug(
+            "Constructing beacon signal for %s, commitment: %s",
+            self.beacon_id,
+            commitment_bytes.hex(),
+        )
         if len(self.utxo_tx_ins) == 0:
             raise Exception(f"No UTXOs, fund beacon address {self.address}")
 
@@ -33,7 +38,9 @@ class BeaconManager(AddressManager):
         tx_ins = [tx_in]
 
         tx_outs = [refund_out, beacon_signal_txout]
-        pending_beacon_signal = Tx(version=1, tx_ins=tx_ins, tx_outs=tx_outs, network=self.network,segwit=True)
+        pending_beacon_signal = Tx(
+            version=1, tx_ins=tx_ins, tx_outs=tx_outs, network=self.network, segwit=True
+        )
 
         new_utxo_txin = TxIn(prev_tx=pending_beacon_signal.hash(), prev_index=0)
         new_utxo_txin._script_pubkey = refund_out.script_pubkey
@@ -56,7 +63,6 @@ class BeaconManager(AddressManager):
     #     result = await self.bitcoin_rpc.acall("send", {"outputs": { self.address: 0.2}})
     #     result2 = await self.bitcoin_rpc.acall("send", {"outputs": { self.address: 0.2}})
     #     result3 = await self.bitcoin_rpc.acall("send", {"outputs": { self.address: 0.2}})
-
 
     #     funding_txid = result["txid"]
     #     funding_tx_hex = await self.bitcoin_rpc.acall("getrawtransaction", {"txid": funding_txid})

@@ -1,23 +1,30 @@
-from .builder import Btcr2DIDDocumentBuilder
-from pydid.verification_method import VerificationMethod
-import jsonpatch
-from pydid.doc import DIDDocument
-import jcs
-import base58
-import json
-from buidl.helper import sha256, bytes_to_str
 import copy
+import json
+import logging
+import urllib
+
+import base58
+import jcs
+import jsonpatch
+from buidl.helper import bytes_to_str, sha256
 from di_bip340.cryptosuite import Bip340JcsCryptoSuite
 from di_bip340.data_integrity_proof import DataIntegrityProof
 from di_bip340.multikey import SchnorrSecp256k1Multikey
-import urllib
-from ..constants import UPDATE_PAYLOAD_CONTEXT, PROOF_TYPE, CRYPTOSUITE, PROOF_PURPOSE, CAPABILITY_ACTION
-import logging
+from pydid.verification_method import VerificationMethod
+
+from ..constants import (
+    CAPABILITY_ACTION,
+    CRYPTOSUITE,
+    PROOF_PURPOSE,
+    PROOF_TYPE,
+    UPDATE_PAYLOAD_CONTEXT,
+)
+from .builder import Btcr2DIDDocumentBuilder
 
 logger = logging.getLogger(__name__)
 
-class Btcr2DIDDocumentUpdater():
 
+class Btcr2DIDDocumentUpdater:
     def __init__(self, document_builder: Btcr2DIDDocumentBuilder, version):
         self.builder = document_builder
         self.current_version = version
@@ -29,7 +36,7 @@ class Btcr2DIDDocumentUpdater():
         vm_path = f"/verificationMethod/{len(self.builder.verification_method.methods)}"
 
         vm_json = verificationMethod.serialize()
-        patch = self.get_patch('add', vm_path, vm_json)
+        patch = self.get_patch("add", vm_path, vm_json)
         self.builder.verification_method.methods.append(verificationMethod)
 
         self.update_patch.append(patch)
@@ -38,18 +45,23 @@ class Btcr2DIDDocumentUpdater():
         service_path = f"/service/{len(self.builder.service.services)}"
 
         service_json = service.serialize()
-        logger.debug("Document before add_service: %s", json.dumps(self.current_document.serialize(), indent=2))
+        logger.debug(
+            "Document before add_service: %s",
+            json.dumps(self.current_document.serialize(), indent=2),
+        )
         self.builder.service.services.append(service)
-        logger.debug("Document after add_service: %s", json.dumps(self.current_document.serialize(), indent=2))
+        logger.debug(
+            "Document after add_service: %s",
+            json.dumps(self.current_document.serialize(), indent=2),
+        )
 
-        patch = self.get_patch('add', service_path, service_json)
+        patch = self.get_patch("add", service_path, service_json)
 
         self.update_patch.append(patch)
 
     def get_patch(self, op, path, value):
-        patch = {'op': op, 'path': path, 'value': value}
+        patch = {"op": op, "path": path, "value": value}
         return patch
-
 
     def validate_update(self):
         logger.debug("JSON Patch: %s", json.dumps(self.update_patch))
@@ -76,12 +88,12 @@ class Btcr2DIDDocumentUpdater():
         target_hash = self.builder.build().canonicalize()
         target_version_id = self.current_version + 1
         update_payload = {
-            '@context': list(UPDATE_PAYLOAD_CONTEXT),
-            'patch': self.update_patch,
+            "@context": list(UPDATE_PAYLOAD_CONTEXT),
+            "patch": self.update_patch,
             # TODO: this might not go here?
-            'sourceHash': bytes_to_str(base58.b58encode(source_hash)),
-            'targetHash': bytes_to_str(base58.b58encode(target_hash)),
-            'targetVersionId': target_version_id
+            "sourceHash": bytes_to_str(base58.b58encode(source_hash)),
+            "targetHash": bytes_to_str(base58.b58encode(target_hash)),
+            "targetVersionId": target_version_id,
         }
 
         logger.debug("Update payload: %s", update_payload)
@@ -92,19 +104,21 @@ class Btcr2DIDDocumentUpdater():
     def finalize_update_payload(self, vm_id, signing_key):
         did_update_invocation = copy.deepcopy(self.update_payload)
 
-        multikey = SchnorrSecp256k1Multikey(id=vm_id, controller=self.current_document.id, private_key=signing_key)
+        multikey = SchnorrSecp256k1Multikey(
+            id=vm_id, controller=self.current_document.id, private_key=signing_key
+        )
         cryptosuite = Bip340JcsCryptoSuite(multikey)
         di_proof = DataIntegrityProof(cryptosuite)
 
         root_capability_id = f"urn:zcap:root:{urllib.parse.quote(self.current_document.id)}"
 
         options = {
-                "type": PROOF_TYPE,
-                "cryptosuite": CRYPTOSUITE,
-                "verificationMethod": multikey.full_id(),
-                "proofPurpose": PROOF_PURPOSE,
-                "capability": root_capability_id,
-                "capabilityAction": CAPABILITY_ACTION
+            "type": PROOF_TYPE,
+            "cryptosuite": CRYPTOSUITE,
+            "verificationMethod": multikey.full_id(),
+            "proofPurpose": PROOF_PURPOSE,
+            "capability": root_capability_id,
+            "capabilityAction": CAPABILITY_ACTION,
         }
 
         logger.debug("Update payload for signing: %s", json.dumps(self.update_payload, indent=2))
@@ -116,7 +130,9 @@ class Btcr2DIDDocumentUpdater():
 
         update_bytes = json.dumps(secured_did_update_payload)
 
-        verificationResult = di_proof.verify_proof(mediaType, update_bytes, expected_proof_purpose, None, None)
+        verificationResult = di_proof.verify_proof(
+            mediaType, update_bytes, expected_proof_purpose, None, None
+        )
 
         if not verificationResult:
             raise Exception("invalidUpdateProof")
@@ -147,6 +163,3 @@ class Btcr2DIDDocumentUpdater():
 #             'targetHash': base58.b58encode(target_hash),
 #             'targetVersionId': target_version_id
 #         }
-
-
-

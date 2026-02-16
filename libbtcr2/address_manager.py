@@ -1,13 +1,13 @@
-from buidl.tx import TxIn, Tx, TxOut
-from buidl.script import address_to_script_pubkey
-from buidl.helper import str_to_bytes
-from .constants import DEFAULT_TX_FEE, MAX_BTC_SUPPLY_SATOSHIS
 import logging
+
+from buidl.tx import Tx, TxIn, TxOut
+
+from .constants import DEFAULT_TX_FEE, MAX_BTC_SUPPLY_SATOSHIS
 
 logger = logging.getLogger(__name__)
 
-class AddressManager():
 
+class AddressManager:
     def __init__(self, esplora_client, network, script_pubkey, signing_key, tx_fee=DEFAULT_TX_FEE):
         self.esplora_client = esplora_client
         self.network = network
@@ -91,31 +91,24 @@ class AddressManager():
         # Calculate refund amount
         refund_amount = total_value - amount - tx_fee
         if refund_amount < 0:
-            raise Exception(
-                "Transaction fee would make refund amount negative"
-            )
+            raise Exception("Transaction fee would make refund amount negative")
 
         # Create transaction outputs
         logger.info("Creating output for %d satoshis to %s", amount, address)
         txout = TxOut(amount=amount, script_pubkey=script_pubkey)
         logger.info("Creating refund output for %d satoshis to %s", refund_amount, self.address)
-        refund_out = TxOut(
-            amount=refund_amount,
-            script_pubkey=self.script_pubkey
-        )
+        refund_out = TxOut(amount=refund_amount, script_pubkey=self.script_pubkey)
 
         logger.info("Transaction details:")
         logger.info("Inputs: %d UTXOs totaling %d satoshis", len(tx_ins), total_value)
-        logger.info("Outputs: %d satoshis to %s + %d satoshis refund", amount, address, refund_amount)
+        logger.info(
+            "Outputs: %d satoshis to %s + %d satoshis refund", amount, address, refund_amount
+        )
         logger.info("Fee: %d satoshis", tx_fee)
 
         # Create and sign transaction
         tx = Tx(
-            version=1,
-            tx_ins=tx_ins,
-            tx_outs=[txout, refund_out],
-            network=self.network,
-            segwit=True
+            version=1, tx_ins=tx_ins, tx_outs=[txout, refund_out], network=self.network, segwit=True
         )
 
         for index in range(len(tx.tx_ins)):

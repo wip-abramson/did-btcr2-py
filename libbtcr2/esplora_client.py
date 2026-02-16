@@ -1,6 +1,6 @@
-import requests
-from typing import Dict, Optional, List
 import logging
+
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -11,12 +11,8 @@ class EsploraClient:
         self.session = requests.Session()
 
     def _make_request(
-        self,
-        method: str,
-        endpoint: str,
-        params: Optional[Dict] = None,
-        json: Optional[Dict] = None
-    ) -> Dict:
+        self, method: str, endpoint: str, params: dict | None = None, json: dict | None = None
+    ) -> dict:
         """Helper method to make HTTP requests"""
         url = f"{self.base_url}/{endpoint}"
         logger.debug("%s %s", method, url)
@@ -25,7 +21,7 @@ class EsploraClient:
         response.raise_for_status()
         return response.json()
 
-    def get_address(self, address: str) -> Dict:
+    def get_address(self, address: str) -> dict:
         """
         Get address information.
 
@@ -39,7 +35,7 @@ class EsploraClient:
         """
         return self._make_request("GET", f"address/{address}")
 
-    def get_address_utxos(self, address: str) -> List[Dict]:
+    def get_address_utxos(self, address: str) -> list[dict]:
         """
         Get unspent transaction outputs (UTXOs) for an address.
 
@@ -55,7 +51,7 @@ class EsploraClient:
         """
         return self._make_request("GET", f"address/{address}/utxo")
 
-    def get_address_transactions(self, address: str) -> List[Dict]:
+    def get_address_transactions(self, address: str) -> list[dict]:
         """
         Get all transactions for an address.
 
@@ -76,7 +72,7 @@ class EsploraClient:
         """
         return self._make_request("GET", f"address/{address}/txs")
 
-    def get_transaction(self, txid: str) -> Dict:
+    def get_transaction(self, txid: str) -> dict:
         """
         Get a transaction by its ID.
 

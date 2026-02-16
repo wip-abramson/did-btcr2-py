@@ -1,23 +1,24 @@
-from buidl.ecc import S256Point
-import math
 import logging
+import math
 
-from .bech32 import encode_bech32_identifier, decode_bech32_identifier
-from.verificationMethod import get_verification_method
+from buidl.ecc import S256Point
 from pydid.did import DID
-from .error import InvalidDidError
+
+from .bech32 import decode_bech32_identifier, encode_bech32_identifier
 from .constants import (
-    BITCOIN, SIGNET, TESTNET3, TESTNET4, REGTEST, MUTINYNET,
-    NETWORKS, VERSIONS, EXTERNAL, KEY,
-    ID_TYPE_TO_HRP, HRP_TO_ID_TYPE, NETWORK_MAP,
-    P2PKH, P2WPKH, P2TR,
-    SINGLETON_BEACON_TYPE, DID_CONTEXT, PLACEHOLDER_DID,
-    DID_METHOD_PREFIX, DID_SCHEME, DID_METHOD,
+    DID_METHOD,
+    DID_METHOD_PREFIX,
+    DID_SCHEME,
+    EXTERNAL,
+    HRP_TO_ID_TYPE,
+    ID_TYPE_TO_HRP,
+    KEY,
+    NETWORK_MAP,
+    NETWORKS,
 )
+from .error import InvalidDidError
 
 logger = logging.getLogger(__name__)
-
-
 
 
 def encode_identifier(id_type, version, network, genesis_bytes):
@@ -38,14 +39,16 @@ def encode_identifier(id_type, version, network, genesis_bytes):
         try:
             S256Point.parse_sec(genesis_bytes)
         except Exception:
-            raise InvalidDidError("Genesis bytes is not a valid compressed secp256k1 public key")
+            raise InvalidDidError(
+                "Genesis bytes is not a valid compressed" + " secp256k1 public key"
+            ) from None
 
     hrp = ID_TYPE_TO_HRP[id_type]
 
     nibbles = []
     f_count = math.floor((version - 1) / 15)
 
-    for i in range(f_count):
+    for _i in range(f_count):
         nibbles.append(15)
 
     nibbles.append((version - 1) % 15)
@@ -54,18 +57,15 @@ def encode_identifier(id_type, version, network, genesis_bytes):
     if len(nibbles) % 2 == 1:
         nibbles.append(0)
 
-
     nibble_range = int(len(nibbles) / 2) - 1
     data_bytes = bytearray()
 
     if f_count == 0:
-        concat = (nibbles[2 * 0] << 4) | nibbles[2 * 0 + 1]
         data_bytes.append((nibbles[2 * 0] << 4) | nibbles[2 * 0 + 1])
     else:
         for index in range(nibble_range):
             logger.debug("index: %s", index)
             raise NotImplementedError()
-
 
     data_bytes += bytearray(genesis_bytes)
 
@@ -77,7 +77,6 @@ def encode_identifier(id_type, version, network, genesis_bytes):
 
     logger.debug("Encoded identifier: %s", identifier)
     return DID(identifier)
-
 
 
 def decode_identifier(identifier):
@@ -110,7 +109,6 @@ def decode_identifier(identifier):
     current_byte = data_bytes[byte_index]
 
     version_nibble = current_byte >> 4
-
 
     while version_nibble == 0xF:
         version += 15
@@ -149,13 +147,13 @@ def decode_identifier(identifier):
         if filler_nibble != 0:
             raise InvalidDidError()
 
-    genesis_bytes = data_bytes[byte_index+1:]
+    genesis_bytes = data_bytes[byte_index + 1 :]
 
     if id_type == KEY:
         try:
             S256Point.parse_sec(genesis_bytes)
         except Exception:
-            raise InvalidDidError()
+            raise InvalidDidError() from None
 
     logger.debug("Decoded: type=%s, version=%s, network=%s", id_type, version, network)
     return id_type, version, network, genesis_bytes

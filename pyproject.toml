@@ -1,0 +1,22 @@
+[project]
+name = "libbtcr2"
+version = "0.3.2"
+description = "Experimental python implementation of the did:btcr2 Method Specification"
+requires-python = ">=3.10"
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "F",    # pyflakes (unused imports, undefined names, etc.)
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "I",    # isort (import ordering)
+    "UP",   # pyupgrade (modernize syntax)
+    "B",    # flake8-bugbear (common bugs)
+    "SIM",  # flake8-simplify
+]
+
+[tool.pytest.ini_options]
+testpaths = ["test"]

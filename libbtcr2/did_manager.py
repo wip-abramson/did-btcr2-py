@@ -1,29 +1,24 @@
-
-from .network_config import DEFAULT_NETWORK_DEFINITIONS
-from .did import encode_identifier
-from .constants import KEY, EXTERNAL, NETWORKS, VERSIONS, PLACEHOLDER_DID
-import jcs
-from buidl.helper import sha256
-from pydid.doc import DIDDocument
-from .diddoc.doc import IntermediateBtcr2DIDDocument, Btcr2Document
-from .diddoc.builder import Btcr2DIDDocumentBuilder
-from .diddoc.updater import Btcr2DIDDocumentUpdater
-from buidl.tx import Tx, TxIn, TxOut, SIGHASH_DEFAULT
-from buidl.script import ScriptPubKey, address_to_script_pubkey
-from buidl.ecc import PrivateKey
 import json
 import logging
+
+import jcs
+from buidl.helper import sha256
+from buidl.script import address_to_script_pubkey
+
 from .beacon_manager import BeaconManager
+from .constants import EXTERNAL, NETWORKS, PLACEHOLDER_DID, VERSIONS
+from .did import encode_identifier
+from .diddoc.builder import Btcr2DIDDocumentBuilder
+from .diddoc.doc import Btcr2Document, IntermediateBtcr2DIDDocument
+from .diddoc.updater import Btcr2DIDDocumentUpdater
 from .esplora_client import EsploraClient
-from .resolver import Btcr2Resolver
+from .network_config import DEFAULT_NETWORK_DEFINITIONS
 
 logger = logging.getLogger(__name__)
 
 
-
-class DIDManager():
-
-    def __init__(self, did_network, btc_network = None, esplora_base=None):
+class DIDManager:
+    def __init__(self, did_network, btc_network=None, esplora_base=None):
         self.pending_updates = []
         self.initial_document = None
         self.beacon_managers = {}
@@ -42,7 +37,6 @@ class DIDManager():
             logger.info("Using Esplora API: %s", esplora_base)
 
         self.esplora_client = EsploraClient(esplora_base)
-
 
     async def create_deterministic(self, initial_sk, network="bitcoin", identifierVersion=1):
         if network not in NETWORKS:
@@ -69,7 +63,6 @@ class DIDManager():
             elif "P2TR" in beacon.id.fragment:
                 self.add_beacon_manager(beacon.id, initial_sk, public_key.p2tr_script())
 
-
         self.did = did_document.id
         self.document = did_document
         self.version = 1
@@ -78,7 +71,9 @@ class DIDManager():
         logger.info("Created deterministic DID: %s", did_document.id)
         return did_document.id, did_document
 
-    def create_external(self, intermediate_document: IntermediateBtcr2DIDDocument, network = "bitcoin", version = 1):
+    def create_external(
+        self, intermediate_document: IntermediateBtcr2DIDDocument, network="bitcoin", version=1
+    ):
         if network not in NETWORKS:
             raise Exception(f"Invalid Network : {network}")
 
@@ -89,7 +84,9 @@ class DIDManager():
             raise Exception(f"Invalid Version : {version}")
 
         if intermediate_document.id != PLACEHOLDER_DID:
-            raise Exception(f"Intermediate Document must use placeholder id : {intermediate_document.id}")
+            raise Exception(
+                f"Intermediate Document must use placeholder id : {intermediate_document.id}"
+            )
 
         genesis_bytes = sha256(jcs.canonicalize(intermediate_document.serialize()))
         logger.debug("Genesis bytes: %s", genesis_bytes.hex())
@@ -129,9 +126,7 @@ class DIDManager():
         signal_id = self.esplora_client.broadcast_tx(signed_tx.serialize().hex())
         logger.info("Beacon signal broadcast with txid: %s", signal_id)
 
-        self.signals_metadata[signal_id] = {
-            "updatePayload": secured_update
-        }
+        self.signals_metadata[signal_id] = {"updatePayload": secured_update}
 
         return signal_id
 
@@ -151,11 +146,12 @@ class DIDManager():
         if beacon_id in self.beacon_managers:
             raise Exception("Beacon already exists")
 
-        bm = BeaconManager(self.btc_network, beacon_id, initial_sk, script_pubkey, self.esplora_client)
+        bm = BeaconManager(
+            self.btc_network, beacon_id, initial_sk, script_pubkey, self.esplora_client
+        )
         self.beacon_managers[beacon_id] = bm
         logger.debug("Added beacon manager for %s at %s", beacon_id, bm.address)
         return bm
-
 
     def get_sidecar_data(self):
         sidecarData = {
@@ -170,18 +166,15 @@ class DIDManager():
 
         return sidecarData
 
-
     def serialize(self):
         did_manager_data = {
             "did": self.did,
             "document": self.document.serialize(),
             "version": self.version,
-            "sidecarData": self.get_sidecar_data()
+            "sidecarData": self.get_sidecar_data(),
         }
 
         return did_manager_data
-
-
 
     @classmethod
     def from_did(cls, did_data, did_network, btc_network, keystore, esplora_base=None):
@@ -201,7 +194,6 @@ class DIDManager():
         did_manager.version = version
         did_manager.signals_metadata = signals_metadata
         did_manager.initial_document = initial_document
-
 
         for beacon in did_manager.document.beacon_services():
             beacon_sk = keystore.get_key(beacon.id)

@@ -1,5 +1,4 @@
-from multiformats import varint, multibase
-from buidl.ecc import S256Point
+from multiformats import multibase, varint
 
 from .constants import SECP256K1_PUBLIC_KEY_CODEC
 
