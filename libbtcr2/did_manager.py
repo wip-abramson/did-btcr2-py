@@ -1,6 +1,7 @@
 
+from .network_config import DEFAULT_NETWORK_DEFINITIONS
 from .did import encode_identifier
-from .constants import KEY, EXTERNAL, NETWORKS, VERSIONS, PLACEHOLDER_DID, DEFAULT_ESPLORA_URL
+from .constants import KEY, EXTERNAL, NETWORKS, VERSIONS, PLACEHOLDER_DID
 import jcs
 from buidl.helper import sha256
 from pydid.doc import DIDDocument
@@ -22,15 +23,25 @@ logger = logging.getLogger(__name__)
 
 class DIDManager():
 
-    def __init__(self, did_network, btc_network = None, esplora_base=DEFAULT_ESPLORA_URL):
-
-        self.esplora_client = EsploraClient(esplora_base)
+    def __init__(self, did_network, btc_network = None, esplora_base=None):
         self.pending_updates = []
         self.initial_document = None
         self.beacon_managers = {}
         self.did = None
         self.did_network = did_network
-        self.btc_network = btc_network if btc_network is not None else did_network
+
+        default_network_definition = DEFAULT_NETWORK_DEFINITIONS.get(self.did_network, {})
+
+        logger.info("Initializing DID Manager for network: %s", self.did_network)
+        if default_network_definition:
+            if btc_network is None:
+                self.btc_network = default_network_definition.get("btc_network")
+            logger.info("Using Bitcoin network: %s", btc_network)
+            if esplora_base is None:
+                esplora_base = default_network_definition.get("esplora_api")
+            logger.info("Using Esplora API: %s", esplora_base)
+
+        self.esplora_client = EsploraClient(esplora_base)
 
 
     async def create_deterministic(self, initial_sk, network="bitcoin", identifierVersion=1):
@@ -96,7 +107,6 @@ class DIDManager():
 
         return identifier, did_document
 
-
     def updater(self):
         builder = Btcr2DIDDocumentBuilder.from_doc(self.document.model_copy(deep=True))
         logger.debug("Current document: %s", json.dumps(self.document.serialize(), indent=2))
@@ -106,19 +116,9 @@ class DIDManager():
     async def announce_update(self, beacon_id, secured_update):
         logger.info("Announcing update via beacon %s", beacon_id)
         beacon_manager = self.beacon_managers.get(beacon_id)
-        # print(beacon_id)
-        # for service in self.document.service:
-        #     print(service)
-        #     if service.id == beacon_id:
-        #         beacon_service = service
-        #         break
 
         if not beacon_manager:
             raise Exception("InvalidBeacon")
-
-        # beacon_address = beacon_service.serialize()["serviceEndpoint"]
-
-        # print("Beaocn Address", beacon_address)
 
         update_hash = sha256(jcs.canonicalize(secured_update))
 
@@ -184,7 +184,7 @@ class DIDManager():
 
 
     @classmethod
-    def from_did(cls, did_data, did_network, btc_network, keystore, esplora_base=DEFAULT_ESPLORA_URL):
+    def from_did(cls, did_data, did_network, btc_network, keystore, esplora_base=None):
         logger.info("Loading DID manager from data: %s", did_data["did"])
         did = did_data["did"]
         sidecar_data = did_data["sidecarData"]

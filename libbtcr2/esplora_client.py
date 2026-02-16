@@ -1,13 +1,12 @@
 import requests
 from typing import Dict, Optional, List
-from .constants import DEFAULT_ESPLORA_MUTINYNET_URL
 import logging
 
 logger = logging.getLogger(__name__)
 
 
 class EsploraClient:
-    def __init__(self, base_url: str = DEFAULT_ESPLORA_MUTINYNET_URL):
+    def __init__(self, base_url: str):
         self.base_url = base_url
         self.session = requests.Session()
 

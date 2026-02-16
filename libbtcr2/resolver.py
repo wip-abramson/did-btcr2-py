@@ -22,8 +22,9 @@ from .constants import (
     KEY, EXTERNAL,
     DID_CONTEXT, GENESIS_COINBASE, COINBASE_TXIDS,
     SINGLETON_BEACON_TYPE, P2PKH, P2WPKH, P2TR,
-    OP_RETURN, DEFAULT_ESPLORA_URL, ZCAP_CONTEXT, PROOF_PURPOSE,
+    OP_RETURN, ZCAP_CONTEXT, PROOF_PURPOSE,
 )
+from .network_config import DEFAULT_NETWORK_DEFINITIONS
 from .diddoc.builder import Btcr2DIDDocumentBuilder, IntermediateBtcr2DIDDocumentBuilder
 from .diddoc.doc import Btcr2Document, IntermediateBtcr2DIDDocument
 from .helper import canonicalize_and_hash
@@ -34,12 +35,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_NETWORK_DEFINITIONS = {
-    "regtest": {
-        "btc_network": "regtest",
-        "esplora_api": DEFAULT_ESPLORA_URL,
-    }
-}
 
 
 class Btcr2Resolver():

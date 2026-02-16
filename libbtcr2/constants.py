@@ -90,6 +90,6 @@ BECH32_CHECKSUM_LEN = 6
 
 # Configurable defaults
 DEFAULT_TX_FEE = 4000
-DEFAULT_ESPLORA_URL = "http://localhost:3000"
-DEFAULT_ESPLORA_MUTINYNET_URL = "https://mutinynet.com/api"
 DEFAULT_FUNDING_AMOUNT = 0.2
+
+
