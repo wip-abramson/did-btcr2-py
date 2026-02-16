@@ -17,6 +17,9 @@ dependencies = [
     "jsonpatch",
 ]
 
+[project.optional-dependencies]
+dev = ["pre-commit", "pytest", "ruff"]
+
 [tool.ruff]
 line-length = 100
 
