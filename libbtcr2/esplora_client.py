@@ -1,12 +1,13 @@
 import requests
 from typing import Dict, Optional, List
+from .constants import DEFAULT_ESPLORA_MUTINYNET_URL
 import logging
 
 logger = logging.getLogger(__name__)
 
 
 class EsploraClient:
-    def __init__(self, base_url: str = "https://mutinynet.com/api"):
+    def __init__(self, base_url: str = DEFAULT_ESPLORA_MUTINYNET_URL):
         self.base_url = base_url
         self.session = requests.Session()
 
@@ -28,10 +29,10 @@ class EsploraClient:
     def get_address(self, address: str) -> Dict:
         """
         Get address information.
-        
+
         Args:
             address: The Bitcoin address to query
-            
+
         Returns:
             Dict containing address information including:
             - chain_stats: Statistics for the main chain
@@ -42,10 +43,10 @@ class EsploraClient:
     def get_address_utxos(self, address: str) -> List[Dict]:
         """
         Get unspent transaction outputs (UTXOs) for an address.
-        
+
         Args:
             address: The Bitcoin address to query
-            
+
         Returns:
             List of UTXOs, each containing:
             - txid: Transaction ID
@@ -58,10 +59,10 @@ class EsploraClient:
     def get_address_transactions(self, address: str) -> List[Dict]:
         """
         Get all transactions for an address.
-        
+
         Args:
             address: The Bitcoin address to query
-            
+
         Returns:
             List of transactions, each containing:
             - txid: Transaction ID
@@ -79,10 +80,10 @@ class EsploraClient:
     def get_transaction(self, txid: str) -> Dict:
         """
         Get a transaction by its ID.
-        
+
         Args:
             txid: The transaction ID to query
-            
+
         Returns:
             Dict containing transaction information including:
             - txid: Transaction ID
@@ -95,15 +96,15 @@ class EsploraClient:
             - fee: Transaction fee in satoshis
             - status: Transaction status
         """
-        return self._make_request("GET", f"tx/{txid}")  
-    
+        return self._make_request("GET", f"tx/{txid}")
+
     def get_transaction_hex(self, txid: str) -> str:
         """
         Get a transaction hex by its ID.
-        
+
         Args:
             txid: The transaction ID to query
-            
+
         Returns: the hex string of the transaction
         """
         url = f"{self.base_url}/tx/{txid}/hex"
@@ -111,14 +112,14 @@ class EsploraClient:
         response = self.session.get(url)
         response.raise_for_status()
         return response.text
-    
+
     def broadcast_tx(self, tx_hex):
         """
-        Broadcast a raw transaction to the network. 
-        
+        Broadcast a raw transaction to the network.
+
         Args:
             tx_hex: The transaction should be provided as hex in the request body.
-            
+
         Returns: The txid will be returned on success.
         """
         url = f"{self.base_url}/tx"

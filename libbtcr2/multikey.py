@@ -1,7 +1,9 @@
 from multiformats import varint, multibase
 from buidl.ecc import S256Point
 
-SECP256K1_PUBLIC_KEY_PREFIX = varint.encode(0xe7)
+from .constants import SECP256K1_PUBLIC_KEY_CODEC
+
+SECP256K1_PUBLIC_KEY_PREFIX = varint.encode(SECP256K1_PUBLIC_KEY_CODEC)
 
 
 def get_public_key_multibase(key_bytes):

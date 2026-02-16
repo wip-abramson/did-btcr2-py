@@ -3,13 +3,14 @@ from typing_extensions import Literal
 from pydantic import AnyUrl, ConfigDict, StrictStr
 from typing import Any, List, Optional, Union
 
+from .constants import BEACON_TYPE_NAMES
 
 
 SINGLETON_BEACON = Literal["SingletonBeacon"]
-SMT_AGGREGATE_BEACON = Literal["SMTAggregateBeacon"]    
+SMT_AGGREGATE_BEACON = Literal["SMTAggregateBeacon"]
 CID_AGGREGATE_BEACON = Literal["CIDAggregateBeacon"]
 
-BeaconTypeNames = ["SingletonBeacon", "SMTAggregateBeacon", "CIDAggregateBeacon"]
+BeaconTypeNames = BEACON_TYPE_NAMES
 
 
 class BeaconService(Service):
@@ -19,7 +20,7 @@ class BeaconService(Service):
         populate_by_name=True,
         discriminator='type'
     )
-    
+
     service_endpoint: str
     type: str
 
@@ -27,7 +28,7 @@ class BeaconService(Service):
 
     def address(self):
         return self.service_endpoint.replace('bitcoin:', '')
-    
+
     # def add_funding_tx(self, funding_tx):
     #     print("Funding Tx", funding_tx)
     #     for index, tx_out in enumerate(funding_tx.tx_outs):

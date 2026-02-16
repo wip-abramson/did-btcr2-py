@@ -1,26 +1,27 @@
 from buidl.tx import TxIn, Tx, TxOut
 from buidl.script import address_to_script_pubkey
 from buidl.helper import str_to_bytes
+from .constants import DEFAULT_TX_FEE, MAX_BTC_SUPPLY_SATOSHIS
 import logging
 
 logger = logging.getLogger(__name__)
 
 class AddressManager():
 
-    def __init__(self, esplora_client, network, script_pubkey, signing_key):
+    def __init__(self, esplora_client, network, script_pubkey, signing_key, tx_fee=DEFAULT_TX_FEE):
         self.esplora_client = esplora_client
         self.network = network
         self.script_pubkey = script_pubkey
         self.address = script_pubkey.address(network)
         self.signing_key = signing_key
         self.utxo_tx_ins = self.fetch_utxos()
-        self.tx_fee = 4000
-    
+        self.tx_fee = tx_fee
+
     def fetch_utxos(self):
         tx_ins = []
         try:
             utxos = self.esplora_client.get_address_utxos(self.address)
-            
+
             logger.debug("utxos: %s", utxos)
             # utxos = [utxo for utxo in utxos if utxo["status"]["confirmed"]]
             for utxo in utxos:
@@ -38,7 +39,7 @@ class AddressManager():
         except Exception as e:
             logger.error("Error fetching UTXOs: %s", e)
         return tx_ins
-    
+
     def add_funding_tx(self, funding_tx):
         logger.info("Adding funding TX")
         for index, tx_out in enumerate(funding_tx.tx_outs):
@@ -50,22 +51,22 @@ class AddressManager():
                 tx_in._script_pubkey = tx_out.script_pubkey
                 tx_in._value = tx_out.amount
                 self.utxo_tx_ins.append(tx_in)
-    
+
     def send_to_address(self, script_pubkey, amount):
         address = script_pubkey.address(network=self.network)
         tx_fee = self.tx_fee  # satoshis
-        
+
         # Validate amount
         if amount <= 0:
             raise ValueError("Amount must be greater than 0")
-        if amount > 21000000 * 100000000:  # Max Bitcoin supply in satoshis
+        if amount > MAX_BTC_SUPPLY_SATOSHIS:
             raise ValueError("Amount exceeds maximum Bitcoin supply")
-            
+
         if len(self.utxo_tx_ins) == 0:
             self.utxo_tx_ins = self.fetch_utxos()
             if len(self.utxo_tx_ins) == 0:
                 raise Exception(f"No UTXOs, fund address {self.address}")
-        
+
         # Select UTXOs to spend
         tx_ins = []
         total_value = 0
@@ -73,7 +74,7 @@ class AddressManager():
             logger.debug("UTXO value: %d satoshis", tx_in.value())
             total_value += tx_in.value()
             tx_ins.append(tx_in)
-            
+
             if total_value >= amount + tx_fee:
                 break
 
@@ -136,4 +137,3 @@ class AddressManager():
             logger.error("Failed to broadcast transaction: %s", e)
             logger.debug("Transaction hex: %s", tx_hex)
             raise
-

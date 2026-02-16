@@ -1,12 +1,7 @@
 from buidl.bech32 import bc32encode, BECH32_ALPHABET, encode_bech32, convertbits, bech32m_create_checksum, bech32m_verify_checksum
 from buidl.helper import int_to_big_endian
 
-PREFIX = {
-    "key": "k",
-    "external": "x"
-}
-
-TYPE_FOR_PREFIX = {v: k for k, v in PREFIX.items()}
+from .constants import ID_TYPE_TO_HRP as PREFIX, HRP_TO_ID_TYPE as TYPE_FOR_PREFIX, BECH32_CHECKSUM_LEN
 
 
 def encode_bech32_identifier(hrp, value):
@@ -22,28 +17,15 @@ def decode_bech32_identifier(value):
     type = TYPE_FOR_PREFIX.get(hrp)
     if not type:
         raise ValueError(f"unknown human readable part: {hrp}")
-    
+
     data = [BECH32_ALPHABET.index(c) for c in raw_data]
 
     if not bech32m_verify_checksum(hrp, data):
         raise ValueError(f"bad bech32 encoding: {value}")
-    
+
     # Remove checksum
-    data = data[0:-6]
-    
-    # number = 0
-    # for digit in data[1:-6]:
-    #     number = (number << 5) + digit
-    # num_bytes = (len(data) - 7) * 5 // 8
-    # bits_to_ignore = (len(data) - 7) * 5 % 8
-    # number >>= bits_to_ignore
-    # identifier = int_to_big_endian(number, num_bytes)
-    # if num_bytes < 2 or num_bytes > 40:
-    #     raise ValueError(f"bytes out of range: {num_bytes}")
+    data = data[0:-BECH32_CHECKSUM_LEN]
+
     genesis_bytes = bytes(convertbits(data, 5, 8, False))
 
     return [hrp, genesis_bytes]
-    
-
-
-

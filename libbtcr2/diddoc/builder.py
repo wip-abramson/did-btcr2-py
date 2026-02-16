@@ -7,7 +7,7 @@ from pydid.verification_method import Multikey
 from buidl.ecc import S256Point
 
 from ..service import SingletonBeaconService
-from ..did import PLACEHOLDER_DID, KEY
+from ..constants import PLACEHOLDER_DID, KEY, DID_CONTEXT, NETWORK_DISPLAY_MAP
 from typing import Iterator, List, Optional, Type, Union
 from .doc import IntermediateBtcr2DIDDocument, Btcr2Document
 from ..did import encode_identifier
@@ -24,15 +24,15 @@ class Btcr2ServiceBuilder(ServiceBuilder):
         service_endpoint = f"bitcoin:{beacon_address}"
         service = SingletonBeaconService.make(
             id=self._did.ref(ident),
-            service_endpoint=service_endpoint    
+            service_endpoint=service_endpoint
         )
 
         self.services.append(service)
-        return service        
-    
+        return service
 
 
-    
+
+
 
 class Btcr2DIDDocumentBuilder(DIDDocumentBuilder):
 
@@ -45,13 +45,9 @@ class Btcr2DIDDocumentBuilder(DIDDocumentBuilder):
         controller: Union[List[str], List[DID]] = None,
     ):
         super().__init__(id=id, context=context, also_known_as=also_known_as, controller=controller)
-        self.context = context or self.__default_context()
+        self.context = context or list(DID_CONTEXT)
         self.service = Btcr2ServiceBuilder(self.id)
 
-    @staticmethod
-    def __default_context() -> List[str]:
-        return ["https://www.w3.org/TR/did-1.1", "https://did-btcr2/TBD/context"]
-    
     @classmethod
     def from_secp256k1_key(cls, initial_key: S256Point, network="bitcoin", version=1):
         key_bytes = initial_key.sec()
@@ -76,30 +72,25 @@ class Btcr2DIDDocumentBuilder(DIDDocumentBuilder):
         builder.capability_delegation.reference(verificationMethod.id)
         builder.capability_invocation.reference(verificationMethod.id)
 
-        if network == "bitcoin":
-            network = "mainnet"
-        if network == "testnet3" or network == "testnet4":
-            network = "testnet"
-        if network == "mutinynet":
-            network = "signet"
-        elif isinstance(network, int):
+        display_network = NETWORK_DISPLAY_MAP.get(network, network)
+        if isinstance(network, int):
             # TODO: what should network be when custom?
-            network = "signet"
+            display_network = "signet"
 
-        p2pkh_address = initial_key.p2pkh_script().address(network)
+        p2pkh_address = initial_key.p2pkh_script().address(display_network)
         builder.service.add_singleton_beacon(p2pkh_address, "initialP2PKH")
         logger.debug("Added P2PKH beacon at %s", p2pkh_address)
 
-        p2wpkh_address = initial_key.p2wpkh_address(network=network)
+        p2wpkh_address = initial_key.p2wpkh_address(network=display_network)
         builder.service.add_singleton_beacon(p2wpkh_address, "initialP2WPKH")
         logger.debug("Added P2WPKH beacon at %s", p2wpkh_address)
 
-        p2tr_address = initial_key.p2tr_address(network=network)
+        p2tr_address = initial_key.p2tr_address(network=display_network)
         builder.service.add_singleton_beacon(p2tr_address, "initialP2TR")
         logger.debug("Added P2TR beacon at %s", p2tr_address)
 
         return builder
-    
+
     def build(self) -> Btcr2Document:
         return Btcr2Document.model_construct(
             id=self.id,
@@ -140,7 +131,7 @@ class IntermediateBtcr2DIDDocumentBuilder(Btcr2DIDDocumentBuilder):
             service=self.service.services or None,
             **self.extra,
         )
-    
+
     @classmethod
     def from_doc(cls, doc: DIDDocument) -> "IntermediateBtcr2DIDDocumentBuilder":
         builder = cls(
@@ -148,7 +139,7 @@ class IntermediateBtcr2DIDDocumentBuilder(Btcr2DIDDocumentBuilder):
             also_known_as=doc.also_known_as,
             controller=doc.controller,
         )
-        
+
         vm = doc.verification_method.model_copy(deep=True)
         vm.id = PLACEHOLDER_DID
         builder.verification_method = VerificationMethodBuilder(
@@ -171,4 +162,3 @@ class IntermediateBtcr2DIDDocumentBuilder(Btcr2DIDDocumentBuilder):
         )
         builder.service = Btcr2ServiceBuilder(PLACEHOLDER_DID, services=doc.service)
         return builder
-    

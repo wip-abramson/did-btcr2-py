@@ -6,51 +6,16 @@ from .bech32 import encode_bech32_identifier, decode_bech32_identifier
 from.verificationMethod import get_verification_method
 from pydid.did import DID
 from .error import InvalidDidError
+from .constants import (
+    BITCOIN, SIGNET, TESTNET3, TESTNET4, REGTEST, MUTINYNET,
+    NETWORKS, VERSIONS, EXTERNAL, KEY,
+    ID_TYPE_TO_HRP, HRP_TO_ID_TYPE, NETWORK_MAP,
+    P2PKH, P2WPKH, P2TR,
+    SINGLETON_BEACON_TYPE, DID_CONTEXT, PLACEHOLDER_DID,
+    DID_METHOD_PREFIX, DID_SCHEME, DID_METHOD,
+)
 
 logger = logging.getLogger(__name__)
-
-BITCOIN="bitcoin"
-SIGNET="signet"
-TESTNET3="testnet3"
-TESTNET4="testnet4"
-REGTEST="regtest"
-MUTINYNET="mutinynet"
-
-NETWORKS = [BITCOIN, SIGNET, REGTEST, TESTNET3, TESTNET4, MUTINYNET, None, None, None, None, None, None, 1, 2, 3, 4]
-
-VERSIONS = [1]
-
-EXTERNAL = "external"
-KEY = "key"
-
-
-id_type_to_hrp = {}
-
-id_type_to_hrp[EXTERNAL] = "x"
-id_type_to_hrp[KEY] = "k"
-
-hrp_to_id_type = {v: k for k, v in id_type_to_hrp.items()}
-
-network_map = {
-    0x0: "bitcoin",
-    0x1: "signet",
-    0x2: "regtest",
-    0x3: "testnet3",
-    0x4: "testnet4",
-    0x5: "mutinynet",
-}
-
-
-
-P2PKH = "p2pkh"
-P2WPKH = "p2wpkh"
-P2TR = "p2tr"
-
-SINGLETON_BEACON_TYPE = "SingletonBeacon"
-
-CONTEXT = ["https://www.w3.org/ns/did/v1", "https://did-btcr2/TBD/context"]
-
-PLACEHOLDER_DID = "did:btcr2:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 
 
 
@@ -59,12 +24,12 @@ def encode_identifier(id_type, version, network, genesis_bytes):
     logger.debug("Encoding identifier: type=%s, version=%s, network=%s", id_type, version, network)
     if id_type not in [EXTERNAL, KEY]:
         raise InvalidDidError()
-    
+
     if version != 1:
         raise InvalidDidError()
 
     network_num = None
-    if network is not None and network not in NETWORKS:       
+    if network is not None and network not in NETWORKS:
         raise InvalidDidError(f"Network not recognised {network}")
     else:
         network_num = NETWORKS.index(network)
@@ -75,14 +40,14 @@ def encode_identifier(id_type, version, network, genesis_bytes):
         except Exception:
             raise InvalidDidError("Genesis bytes is not a valid compressed secp256k1 public key")
 
-    hrp = id_type_to_hrp[id_type]
-    
+    hrp = ID_TYPE_TO_HRP[id_type]
+
     nibbles = []
     f_count = math.floor((version - 1) / 15)
 
     for i in range(f_count):
         nibbles.append(15)
-        
+
     nibbles.append((version - 1) % 15)
     nibbles.append(network_num)
 
@@ -104,7 +69,7 @@ def encode_identifier(id_type, version, network, genesis_bytes):
 
     data_bytes += bytearray(genesis_bytes)
 
-    identifier = "did:btcr2:"
+    identifier = DID_METHOD_PREFIX
 
     encoded_string = encode_bech32_identifier(hrp, data_bytes)
 
@@ -120,22 +85,22 @@ def decode_identifier(identifier):
     components = identifier.split(":")
     if len(components) != 3:
         raise InvalidDidError()
-    
-    if components[0] != "did":
+
+    if components[0] != DID_SCHEME:
         raise InvalidDidError()
 
-    if components[1] != "btcr2":
+    if components[1] != DID_METHOD:
         raise Exception("methodNotSupported")
-    
+
     encoded_string = components[2]
 
     hrp, data_bytes = decode_bech32_identifier(encoded_string)
 
-    id_type = hrp_to_id_type.get(hrp)
-    
+    id_type = HRP_TO_ID_TYPE.get(hrp)
+
     if id_type is None:
         raise InvalidDidError()
-    
+
     version = 1
 
     byte_index = 0
@@ -171,7 +136,7 @@ def decode_identifier(identifier):
     nibbles_consumed += 1
     network_value = network_nibble
 
-    network = network_map.get(network_value)
+    network = NETWORK_MAP.get(network_value)
 
     if not network:
         if 0xC <= network_value <= 0xF:
@@ -183,7 +148,7 @@ def decode_identifier(identifier):
         filler_nibble = current_byte & 0x0F
         if filler_nibble != 0:
             raise InvalidDidError()
-        
+
     genesis_bytes = data_bytes[byte_index+1:]
 
     if id_type == KEY:
@@ -191,12 +156,6 @@ def decode_identifier(identifier):
             S256Point.parse_sec(genesis_bytes)
         except Exception:
             raise InvalidDidError()
-    
+
     logger.debug("Decoded: type=%s, version=%s, network=%s", id_type, version, network)
     return id_type, version, network, genesis_bytes
-
-
-
-
-
-

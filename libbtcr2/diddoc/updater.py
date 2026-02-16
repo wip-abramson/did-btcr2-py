@@ -11,6 +11,7 @@ from di_bip340.cryptosuite import Bip340JcsCryptoSuite
 from di_bip340.data_integrity_proof import DataIntegrityProof
 from di_bip340.multikey import SchnorrSecp256k1Multikey
 import urllib
+from ..constants import UPDATE_PAYLOAD_CONTEXT, PROOF_TYPE, CRYPTOSUITE, PROOF_PURPOSE, CAPABILITY_ACTION
 import logging
 
 logger = logging.getLogger(__name__)
@@ -29,7 +30,7 @@ class Btcr2DIDDocumentUpdater():
 
         vm_json = verificationMethod.serialize()
         patch = self.get_patch('add', vm_path, vm_json)
-        self.builder.verification_method.methods.append(verificationMethod) 
+        self.builder.verification_method.methods.append(verificationMethod)
 
         self.update_patch.append(patch)
 
@@ -75,12 +76,7 @@ class Btcr2DIDDocumentUpdater():
         target_hash = self.builder.build().canonicalize()
         target_version_id = self.current_version + 1
         update_payload = {
-            '@context': [
-                'https://w3id.org/security/v2',
-                'https://w3id.org/zcap/v1',
-                'https://w3id.org/json-ld-patch/v1'
-                # TODO did:btcr2 zcap context
-            ],
+            '@context': list(UPDATE_PAYLOAD_CONTEXT),
             'patch': self.update_patch,
             # TODO: this might not go here?
             'sourceHash': bytes_to_str(base58.b58encode(source_hash)),
@@ -92,7 +88,7 @@ class Btcr2DIDDocumentUpdater():
         self.update_payload = update_payload
 
         return update_payload
-    
+
     def finalize_update_payload(self, vm_id, signing_key):
         did_update_invocation = copy.deepcopy(self.update_payload)
 
@@ -103,12 +99,12 @@ class Btcr2DIDDocumentUpdater():
         root_capability_id = f"urn:zcap:root:{urllib.parse.quote(self.current_document.id)}"
 
         options = {
-                "type": "DataIntegrityProof",
-                "cryptosuite": "bip340-jcs-2025",
+                "type": PROOF_TYPE,
+                "cryptosuite": CRYPTOSUITE,
                 "verificationMethod": multikey.full_id(),
-                "proofPurpose": "capabilityInvocation",
+                "proofPurpose": PROOF_PURPOSE,
                 "capability": root_capability_id,
-                "capabilityAction": "Write"
+                "capabilityAction": CAPABILITY_ACTION
         }
 
         logger.debug("Update payload for signing: %s", json.dumps(self.update_payload, indent=2))
@@ -116,7 +112,7 @@ class Btcr2DIDDocumentUpdater():
         secured_did_update_payload = di_proof.add_proof(did_update_invocation, options)
         mediaType = "application/json"
 
-        expected_proof_purpose = "capabilityInvocation"
+        expected_proof_purpose = PROOF_PURPOSE
 
         update_bytes = json.dumps(secured_did_update_payload)
 
@@ -124,11 +120,11 @@ class Btcr2DIDDocumentUpdater():
 
         if not verificationResult:
             raise Exception("invalidUpdateProof")
-        
+
         self.current_document = self.builder.build().model_copy(deep=True)
 
         return secured_did_update_payload
-    
+
 
 # class Btcr2UpdatePayload():
 
@@ -153,4 +149,4 @@ class Btcr2DIDDocumentUpdater():
 #         }
 
 
-    
+

@@ -1,6 +1,7 @@
 from buidl.tx import TxIn, TxOut, Tx
 from buidl.script import ScriptPubKey, address_to_script_pubkey
 from .address_manager import AddressManager
+from .constants import OP_RETURN
 import logging
 
 logger = logging.getLogger(__name__)
@@ -10,8 +11,8 @@ class BeaconManager(AddressManager):
     def __init__(self, network, beacon_id, signing_key, script_pubkey, esplora_client):
         self.beacon_id = beacon_id
         super().__init__(esplora_client, network, script_pubkey, signing_key)
-        
-        
+
+
     def construct_beacon_signal(self, commitment_bytes):
         logger.debug("Constructing beacon signal for %s, commitment: %s", self.beacon_id, commitment_bytes.hex())
         if len(self.utxo_tx_ins) == 0:
@@ -19,7 +20,7 @@ class BeaconManager(AddressManager):
 
         tx_in = self.utxo_tx_ins.pop(0)
 
-        script_pubkey = ScriptPubKey([0x6a, commitment_bytes])
+        script_pubkey = ScriptPubKey([OP_RETURN, commitment_bytes])
 
         beacon_signal_txout = TxOut(0, script_pubkey)
 
@@ -47,7 +48,7 @@ class BeaconManager(AddressManager):
         logger.debug("Signing result: %s", signing_res)
         if not signing_res:
             raise Exception("Invalid Beacon Key, unable to sign signal")
-        
+
         return pending_signal
 
     # TODO: only works on regtest
@@ -60,5 +61,5 @@ class BeaconManager(AddressManager):
     #     funding_txid = result["txid"]
     #     funding_tx_hex = await self.bitcoin_rpc.acall("getrawtransaction", {"txid": funding_txid})
     #     funding_tx = Tx.parse_hex(funding_tx_hex)
-        
+
     #     self.add_funding_tx(funding_tx)

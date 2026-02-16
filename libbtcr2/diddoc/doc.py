@@ -1,7 +1,10 @@
 from pydid.doc.doc import DIDDocument, PossibleServiceTypes
 from pydid.did import DID, DIDUrl
-from ..service import ServiceBeaconTypes, SingletonBeaconService, SMTAggregateBeaconService, CIDAggregateBeaconService, BeaconTypeNames
-from ..did import PLACEHOLDER_DID
+from ..service import ServiceBeaconTypes, SingletonBeaconService, SMTAggregateBeaconService, CIDAggregateBeaconService
+from ..constants import (
+    PLACEHOLDER_DID, DID_CONTEXT, BEACON_TYPE_NAMES,
+    SINGLETON_BEACON_TYPE, SMT_AGGREGATE_BEACON_TYPE, CID_AGGREGATE_BEACON_TYPE,
+)
 from buidl.helper import sha256
 import jcs
 from typing import Any, List, Optional, Union, Annotated
@@ -13,35 +16,32 @@ logger = logging.getLogger(__name__)
 Btcr2PossibleServiceTypes = Union[PossibleServiceTypes, ServiceBeaconTypes]
 
 class Btcr2Document(DIDDocument):
-    context: Annotated[List[Union[str, dict]], Field(alias="@context")] = [
-        "https://www.w3.org/TR/did-1.1", 
-        "https://did-btcr2/TBD/context"
-    ]
+    context: Annotated[List[Union[str, dict]], Field(alias="@context")] = list(DID_CONTEXT)
     service: Optional[List[Btcr2PossibleServiceTypes]] = None
 
 
     def canonicalize(self):
         return sha256(jcs.canonicalize(self.serialize()))
-        
+
 
     def beacon_services(self):
-        return [service for service in self.service if service.type in BeaconTypeNames]
-    
+        return [service for service in self.service if service.type in BEACON_TYPE_NAMES]
+
 
     @classmethod
     def deserialize(cls, value: dict) -> "Btcr2Document":
         # Make a copy to avoid modifying the input
         value_copy = value.copy()
-        
+
         # Convert services before base validation
         if value_copy.get("service"):
             services = []
             for service in value_copy["service"]:
-                if service["type"] == "SingletonBeacon":
+                if service["type"] == SINGLETON_BEACON_TYPE:
                     services.append(SingletonBeaconService(**service))
-                elif service["type"] == "SMTAggregateBeacon":
+                elif service["type"] == SMT_AGGREGATE_BEACON_TYPE:
                     services.append(SMTAggregateBeaconService(**service))
-                elif service["type"] == "CIDAggregateBeacon":
+                elif service["type"] == CID_AGGREGATE_BEACON_TYPE:
                     services.append(CIDAggregateBeaconService(**service))
                 else:
                     services.append(service)
@@ -49,7 +49,7 @@ class Btcr2Document(DIDDocument):
 
         DIDDocument.deserialize(value_copy)
         return super().deserialize(value_copy)
-    
+
 
 
 class IntermediateBtcr2DIDDocument(Btcr2Document):
@@ -62,7 +62,7 @@ class IntermediateBtcr2DIDDocument(Btcr2Document):
 
         did_document.id = did
 
-        if did_document.controller: 
+        if did_document.controller:
             for index, controller in enumerate(did_document.controller):
                 if controller == PLACEHOLDER_DID:
                     did_document.controller[index] = did
@@ -128,16 +128,16 @@ class IntermediateBtcr2DIDDocument(Btcr2Document):
                         vm.id = DIDUrl.unparse(did, vm.id.path, vm.id.query, vm.id.fragment)
                     if vm.controller == PLACEHOLDER_DID:
                         vm.controller = did
-        
+
         if did_document.service:
 
             for index, service in enumerate(did_document.service):
                 if PLACEHOLDER_DID in service.id:
-                    
+
                     did_document.service[index].id = DIDUrl.unparse(did, service.id.path, service.id.query, service.id.fragment)
-                  
+
         return did_document
-       
+
     @staticmethod
     def from_did_document(did_document):
         logger.debug("Converting DID document %s to intermediate form", did_document.id)
@@ -146,7 +146,7 @@ class IntermediateBtcr2DIDDocument(Btcr2Document):
         did = did_document.id
         intermediate_doc.id = PLACEHOLDER_DID
 
-        if intermediate_doc.controller: 
+        if intermediate_doc.controller:
             for index, controller in enumerate(intermediate_doc.controller):
                 if controller == did:
                     intermediate_doc.controller[index] = PLACEHOLDER_DID
@@ -211,7 +211,7 @@ class IntermediateBtcr2DIDDocument(Btcr2Document):
                         vm.id = DIDUrl.unparse(PLACEHOLDER_DID, vm.id.path, vm.id.query, vm.id.fragment)
                     if vm.controller == did:
                         vm.controller = PLACEHOLDER_DID
-        
+
         if intermediate_doc.service:
             for index, service in enumerate(intermediate_doc.service):
                 if did in service.id:
@@ -220,4 +220,3 @@ class IntermediateBtcr2DIDDocument(Btcr2Document):
 
 
         return intermediate_doc
-
