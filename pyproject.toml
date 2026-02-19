@@ -2,6 +2,8 @@
 name = "libbtcr2"
 version = "0.3.2"
 description = "Experimental python implementation of the did:btcr2 Method Specification"
+authors = [{name = "Will Abramson", email = "will@legreq.com"}]
+readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "buidl @ git+https://github.com/buidl-bitcoin/buidl-python@c0b7d57",

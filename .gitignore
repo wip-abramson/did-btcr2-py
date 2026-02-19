@@ -1,5 +1,7 @@
 build
 dist
-*.egg-info  
+*.egg-info
 venv
 __pycache__
+.pytest_cache
+.ruff_cache
